@@ -1,0 +1,31 @@
+<div id="container" [ngStyle]="{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}">
+  <mat-card class="mat-elevation-z8">
+    <img *ngIf="images.logoImageUrl && images.logoImageUrl.length >= 1" [src]="images.logoImageUrl">
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+
+      <mat-form-field>
+        <input matInput [placeholder]="usernamePlaceholder" formControlName="username">
+      </mat-form-field>
+
+      <mat-form-field>
+          <input matInput type="password" [placeholder]="passwordPlaceholder" formControlName="password">
+      </mat-form-field>
+
+      <button 
+        mat-raised-button
+        type="submit" 
+        [disabled]="userForm.invalid"
+        *ngIf="!(isPasswordBeingChanged$ | async)"
+        [ngStyle]="{
+          'background-color': buttonsBackgroundColor,
+          'color': buttonsColor
+        }"
+      >
+        {{ loginButtonTraduction }}
+      </button>
+      <mat-spinner *ngIf="isPasswordBeingChanged$ | async" [diameter]="36"></mat-spinner>
+
+      <a (click)="openDialog()">{{ forgottenPassword }}</a>
+    </form>
+  </mat-card>
+</div>

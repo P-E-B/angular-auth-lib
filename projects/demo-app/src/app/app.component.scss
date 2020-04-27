@@ -1,0 +1,21 @@
+#app {
+    height: 100vh;
+    max-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
+    #router-container {
+        display: flex;
+        flex: 1;
+        height: calc(100vh);
+        width: 100%;
+        overflow: auto;
+
+        #router-outlet {
+            display: block;
+            width: 100%;
+            overflow: auto;
+        }
+    }
+}
