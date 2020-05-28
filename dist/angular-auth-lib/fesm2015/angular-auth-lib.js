@@ -88,6 +88,8 @@ const ɵ3 = (state) => state.isPasswordBeingChanged;
 const selectIsPasswordBeingChanged = createSelector(selectAuthState, ɵ3);
 const ɵ4 = (state) => state.usersList;
 const selectUsersList = createSelector(selectAuthState, ɵ4); // list of colleagues of the current user for example
+const ɵ5 = (state) => state.isSignUpLoading;
+const selectIsSignUpLoading = createSelector(selectAuthState, ɵ5);
 
 let AuthGuard = class AuthGuard {
     constructor(store, router) {
@@ -430,6 +432,7 @@ SignUpComponent = __decorate([
 
 const initialState = {
     isAuthenticated: false,
+    isSignUpLoading: false,
     user: null,
     error: null,
     isPasswordBeingChanged: false,
@@ -437,8 +440,12 @@ const initialState = {
 };
 function authReducer(state = initialState, action) {
     switch (action.type) {
+        case AUTH_ACTIONS_TYPE.SIGN_UP:
+            return Object.assign(Object.assign({}, state), { error: null, isSignUpLoading: true });
         case AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE:
-            return Object.assign(Object.assign({}, state), { error: action.payload });
+            return Object.assign(Object.assign({}, state), { error: action.payload, isSignUpLoading: false });
+        case AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS:
+            return Object.assign(Object.assign({}, state), { error: null, isSignUpLoading: false });
         case AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS:
             return Object.assign(Object.assign({}, state), { isAuthenticated: true, user: action.payload.user, error: null, usersList: action.payload.usersList });
         case AUTH_ACTIONS_TYPE.LOG_IN_FAILURE:
@@ -626,5 +633,5 @@ AuthModule = AuthModule_1 = __decorate([
  * Generated bundle index. Do not edit.
  */
 
-export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, authReducer, initialState, selectAuthState, selectIsAuthenticated, selectIsPasswordBeingChanged, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, AuthEffects as ɵa };
+export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, authReducer, initialState, selectAuthState, selectIsAuthenticated, selectIsPasswordBeingChanged, selectIsSignUpLoading, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, ɵ5, AuthEffects as ɵa };
 //# sourceMappingURL=angular-auth-lib.js.map

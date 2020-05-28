@@ -24,6 +24,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.9**: Adding `isSignUpLoading` selector
 * **0.0.8**: Improving README.md
 * **0.0.7**: Improving README.md and `auth.service.ts`
 * **0.0.6**: Improving README.md

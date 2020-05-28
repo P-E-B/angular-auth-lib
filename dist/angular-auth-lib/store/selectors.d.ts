@@ -13,3 +13,4 @@ export declare const selectUsersList: import("@ngrx/store").MemoizedSelector<obj
     firstName: string;
     lastName: string;
 }[]>>;
+export declare const selectIsSignUpLoading: import("@ngrx/store").MemoizedSelector<object, boolean, import("@ngrx/store").DefaultProjectorFn<boolean>>;

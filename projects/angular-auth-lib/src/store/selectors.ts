@@ -27,3 +27,8 @@ export const selectUsersList = createSelector(
     selectAuthState,
     (state: AuthState) => state.usersList
 ); // list of colleagues of the current user for example
+
+export const selectIsSignUpLoading = createSelector(
+    selectAuthState,
+    (state: AuthState) => state.isSignUpLoading
+);

@@ -24,6 +24,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.9**: Adding `isSignUpLoading` selector
 * **0.0.8**: Improving README.md
 * **0.0.7**: Improving README.md and `auth.service.ts`
 * **0.0.6**: Improving README.md
@@ -63,6 +64,25 @@ For the module to work as expected, each user sent to the frontend must have bas
 * **REQUIRED** `token` when login is successful
 * **REQUIRED** `redirectUrlAfterLogin` to tell the router where to route the user after successful login
 * **REQUIRED** `allowedUrls` to let the Guard (if implemented) know if the desired url is allowed. Obviously, ensure permissions on the backend are well set as well
+
+Here is an example of a user who can access `'home'` and will be redirected to it after successful login:
+
+```json
+{
+	"id" : 1,
+	"username" : "paul",
+	"allowedUrls" : [
+		"home"
+	],
+	"dateJoined" : "2020-04-27T00:26:59.482740+02:00",
+	"email" : "paul.emile.brotons@gmail.com",
+	"enterprise" : "MongoDB",
+	"firstName" : "Paul-Emile",
+	"lastName" : "Brotons",
+	"passwordHash" : "azerty",
+  "redirectUrlAfterLogin" : "home"
+}
+```
 
 ### Set up the AuthModule in your Root NgModule
 For a basic configuration, add the `AuthModule` under your `StoreModule` and `EffectsModule` in the **imports** array section of your Root NgModule. You may have to turn off the runtime checks of the `StoreModule`.

@@ -4,6 +4,7 @@ import { User } from '../models/user.models';
 
 export interface AuthState {
     isAuthenticated: boolean;
+    isSignUpLoading: boolean;
     user: User;
     error: HttpErrorResponse;
     isPasswordBeingChanged: boolean;
@@ -12,6 +13,7 @@ export interface AuthState {
 
 export const initialState: AuthState = {
     isAuthenticated: false,
+    isSignUpLoading: false,
     user: null,
     error: null,
     isPasswordBeingChanged: false,
@@ -20,8 +22,12 @@ export const initialState: AuthState = {
 
 export function authReducer(state: AuthState = initialState, action: UserActions.Actions) {
     switch (action.type) {
+        case UserActions.AUTH_ACTIONS_TYPE.SIGN_UP:
+            return { ...state, error: null, isSignUpLoading: true };
         case UserActions.AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE:
-            return { ...state, error: action.payload };
+            return { ...state, error: action.payload, isSignUpLoading: false };
+        case UserActions.AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS:
+            return { ...state, error: null, isSignUpLoading: false };
         case UserActions.AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS:
             return { ...state, isAuthenticated: true, user: action.payload.user, error: null, usersList: action.payload.usersList };
         case UserActions.AUTH_ACTIONS_TYPE.LOG_IN_FAILURE:

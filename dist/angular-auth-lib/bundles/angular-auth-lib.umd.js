@@ -292,6 +292,8 @@
     var selectIsPasswordBeingChanged = store.createSelector(selectAuthState, ɵ3);
     var ɵ4 = function (state) { return state.usersList; };
     var selectUsersList = store.createSelector(selectAuthState, ɵ4); // list of colleagues of the current user for example
+    var ɵ5 = function (state) { return state.isSignUpLoading; };
+    var selectIsSignUpLoading = store.createSelector(selectAuthState, ɵ5);
 
     var AuthGuard = /** @class */ (function () {
         function AuthGuard(store, router) {
@@ -659,6 +661,7 @@
 
     var initialState = {
         isAuthenticated: false,
+        isSignUpLoading: false,
         user: null,
         error: null,
         isPasswordBeingChanged: false,
@@ -667,8 +670,12 @@
     function authReducer(state, action) {
         if (state === void 0) { state = initialState; }
         switch (action.type) {
+            case exports.AUTH_ACTIONS_TYPE.SIGN_UP:
+                return __assign(__assign({}, state), { error: null, isSignUpLoading: true });
             case exports.AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE:
-                return __assign(__assign({}, state), { error: action.payload });
+                return __assign(__assign({}, state), { error: action.payload, isSignUpLoading: false });
+            case exports.AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS:
+                return __assign(__assign({}, state), { error: null, isSignUpLoading: false });
             case exports.AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS:
                 return __assign(__assign({}, state), { isAuthenticated: true, user: action.payload.user, error: null, usersList: action.payload.usersList });
             case exports.AUTH_ACTIONS_TYPE.LOG_IN_FAILURE:
@@ -896,6 +903,7 @@
     exports.selectAuthState = selectAuthState;
     exports.selectIsAuthenticated = selectIsAuthenticated;
     exports.selectIsPasswordBeingChanged = selectIsPasswordBeingChanged;
+    exports.selectIsSignUpLoading = selectIsSignUpLoading;
     exports.selectLogInError = selectLogInError;
     exports.selectUser = selectUser;
     exports.selectUsersList = selectUsersList;
@@ -904,6 +912,7 @@
     exports.ɵ2 = ɵ2;
     exports.ɵ3 = ɵ3;
     exports.ɵ4 = ɵ4;
+    exports.ɵ5 = ɵ5;
     exports.ɵa = AuthEffects;
 
     Object.defineProperty(exports, '__esModule', { value: true });

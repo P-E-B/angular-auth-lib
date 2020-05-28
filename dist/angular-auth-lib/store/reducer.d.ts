@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { User } from '../models/user.models';
 export interface AuthState {
     isAuthenticated: boolean;
+    isSignUpLoading: boolean;
     user: User;
     error: HttpErrorResponse;
     isPasswordBeingChanged: boolean;
