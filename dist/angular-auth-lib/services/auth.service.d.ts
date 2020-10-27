@@ -4,8 +4,9 @@ import { Observable } from 'rxjs';
 import { AuthModuleConfig } from '../token';
 export declare class AuthService {
     private apiUrls;
+    private platformId;
     private http;
-    constructor(apiUrls: AuthModuleConfig['urls'], http: HttpClient);
+    constructor(apiUrls: AuthModuleConfig['urls'], platformId: any, http: HttpClient);
     decodeToken(token: string): Token;
     getToken(): Token;
     private getAccessToken;

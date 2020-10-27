@@ -1,13 +1,13 @@
 import { __decorate, __param } from 'tslib';
-import { InjectionToken, Inject, ɵɵdefineInjectable, ɵɵinject, Injectable, Component, ViewChild, NgModule } from '@angular/core';
+import { InjectionToken, Inject, PLATFORM_ID, ɵɵdefineInjectable, ɵɵinject, Injectable, Component, ViewChild, NgModule } from '@angular/core';
 import { HttpClient, HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
-import { map, withLatestFrom, tap, switchMap, catchError, concatMap } from 'rxjs/operators';
+import { map, withLatestFrom, tap, switchMap, catchError, filter, concatMap } from 'rxjs/operators';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { createFeatureSelector, createSelector, select, Store, StoreModule } from '@ngrx/store';
 import { Validators, FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { get } from 'lodash';
 import { MatDialogRef, MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { CommonModule } from '@angular/common';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,8 +24,9 @@ const AUTH_RESET_ACTIONS = new InjectionToken('Reset actions');
 const AUTH_STYLES = new InjectionToken('Styling');
 
 let AuthService = class AuthService {
-    constructor(apiUrls, http) {
+    constructor(apiUrls, platformId, http) {
         this.apiUrls = apiUrls;
+        this.platformId = platformId;
         this.http = http;
     }
     decodeToken(token) {
@@ -35,7 +36,7 @@ let AuthService = class AuthService {
         return { token: token, expiringDate: expiringDate };
     }
     getToken() {
-        const token = sessionStorage.getItem('token');
+        const token = isPlatformBrowser(this.platformId) ? sessionStorage.getItem('token') : null;
         return token ? this.decodeToken(token) : null;
     }
     getAccessToken(user) {
@@ -67,14 +68,16 @@ let AuthService = class AuthService {
 };
 AuthService.ctorParameters = () => [
     { type: undefined, decorators: [{ type: Inject, args: [AUTH_API_URLS,] }] },
+    { type: undefined, decorators: [{ type: Inject, args: [PLATFORM_ID,] }] },
     { type: HttpClient }
 ];
-AuthService.ɵprov = ɵɵdefineInjectable({ factory: function AuthService_Factory() { return new AuthService(ɵɵinject(AUTH_API_URLS), ɵɵinject(HttpClient)); }, token: AuthService, providedIn: "root" });
+AuthService.ɵprov = ɵɵdefineInjectable({ factory: function AuthService_Factory() { return new AuthService(ɵɵinject(AUTH_API_URLS), ɵɵinject(PLATFORM_ID), ɵɵinject(HttpClient)); }, token: AuthService, providedIn: "root" });
 AuthService = __decorate([
     Injectable({
         providedIn: 'root'
     }),
-    __param(0, Inject(AUTH_API_URLS))
+    __param(0, Inject(AUTH_API_URLS)),
+    __param(1, Inject(PLATFORM_ID))
 ], AuthService);
 
 const selectAuthState = createFeatureSelector('auth');
@@ -92,9 +95,10 @@ const ɵ5 = (state) => state.isSignUpLoading;
 const selectIsSignUpLoading = createSelector(selectAuthState, ɵ5);
 
 let AuthGuard = class AuthGuard {
-    constructor(store, router) {
+    constructor(store, router, platformId) {
         this.store = store;
         this.router = router;
+        this.platformId = platformId;
     }
     canActivate(route, state) {
         return this.store.pipe(select(selectUser), withLatestFrom(this.store.pipe(select(selectIsAuthenticated))), map(([user, isAuthenticated]) => {
@@ -102,7 +106,7 @@ let AuthGuard = class AuthGuard {
                 return true;
             }
             else {
-                if (user && user.allowedUrls.includes(route.routeConfig.path)) {
+                if (user && user.allowedUrls.includes(route.routeConfig.path) && isPlatformBrowser(this.platformId)) {
                     sessionStorage.setItem('redirectedUrlAfterLogIn', state.url);
                 }
                 this.router.navigate(['log-in']);
@@ -113,13 +117,15 @@ let AuthGuard = class AuthGuard {
 };
 AuthGuard.ctorParameters = () => [
     { type: Store },
-    { type: Router }
+    { type: Router },
+    { type: undefined, decorators: [{ type: Inject, args: [PLATFORM_ID,] }] }
 ];
-AuthGuard.ɵprov = ɵɵdefineInjectable({ factory: function AuthGuard_Factory() { return new AuthGuard(ɵɵinject(Store), ɵɵinject(Router)); }, token: AuthGuard, providedIn: "root" });
+AuthGuard.ɵprov = ɵɵdefineInjectable({ factory: function AuthGuard_Factory() { return new AuthGuard(ɵɵinject(Store), ɵɵinject(Router), ɵɵinject(PLATFORM_ID)); }, token: AuthGuard, providedIn: "root" });
 AuthGuard = __decorate([
     Injectable({
         providedIn: 'root'
-    })
+    }),
+    __param(2, Inject(PLATFORM_ID))
 ], AuthGuard);
 
 let TokenInterceptor = class TokenInterceptor {
@@ -469,9 +475,10 @@ function authReducer(state = initialState, action) {
 }
 
 let AuthEffects = class AuthEffects {
-    constructor(resetActions, traductions, actions, authService, router, toastService, dialog, store) {
+    constructor(resetActions, traductions, platformId, actions, authService, router, toastService, dialog, store) {
         this.resetActions = resetActions;
         this.traductions = traductions;
+        this.platformId = platformId;
         this.actions = actions;
         this.authService = authService;
         this.router = router;
@@ -484,13 +491,13 @@ let AuthEffects = class AuthEffects {
             this.toastService.success(get(this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!'));
         }));
         this.SignUpFailure$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE), tap((error) => this.toastService.error(get(this.traductions || {}, 'messages.signupFailure', 'Please try again with a new username.'))));
-        this.LogIn$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN), map((action) => action.payload), switchMap((user) => this.authService.login(user).pipe(concatMap((loggedInUser) => {
+        this.LogIn$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN), filter((action) => isPlatformBrowser(this.platformId)), map((action) => action.payload), switchMap((user) => this.authService.login(user).pipe(concatMap((loggedInUser) => {
             sessionStorage.setItem('token', loggedInUser.token.token);
             return this.authService.getUserInformation().pipe(map(({ user, usersList }) => new LogInSuccess({ user, usersList })), catchError((error) => of(new LogInFailure(error))));
         }), catchError((error) => of(new LogInFailure(error))))));
-        this.LogInSuccess$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS), withLatestFrom(this.store.pipe(select(selectUser))), tap(([action, user]) => {
+        this.LogInSuccess$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS), filter((action) => isPlatformBrowser(this.platformId)), withLatestFrom(this.store.pipe(select(selectUser))), tap(([action, user]) => {
             const redirectedUrlAfterLogIn = sessionStorage.getItem('redirectedUrlAfterLogIn');
-            if (redirectedUrlAfterLogIn) {
+            if (redirectedUrlAfterLogIn && isPlatformBrowser(this.platformId)) {
                 this.router.navigateByUrl(redirectedUrlAfterLogIn);
                 sessionStorage.removeItem('redirectedUrlAfterLogIn');
             }
@@ -500,7 +507,7 @@ let AuthEffects = class AuthEffects {
             this.toastService.success(get(this.traductions || {}, 'messages.loginSuccess', 'Hi! Nice to see you again!'));
         }));
         this.LogInFailure$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN_FAILURE), tap((error) => this.toastService.error(get(this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.'))));
-        this.LogOut$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_OUT), switchMap((action) => {
+        this.LogOut$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_OUT), filter((action) => isPlatformBrowser(this.platformId)), switchMap((action) => {
             sessionStorage.removeItem('token');
             this.router.navigate(['log-in']);
             return (this.resetActions || []).map((resetAction) => new resetAction());
@@ -520,6 +527,7 @@ let AuthEffects = class AuthEffects {
 AuthEffects.ctorParameters = () => [
     { type: Array, decorators: [{ type: Inject, args: [AUTH_RESET_ACTIONS,] }] },
     { type: undefined, decorators: [{ type: Inject, args: [AUTH_TRADUCTIONS,] }] },
+    { type: undefined, decorators: [{ type: Inject, args: [PLATFORM_ID,] }] },
     { type: Actions },
     { type: AuthService },
     { type: Router },
@@ -578,7 +586,8 @@ __decorate([
 AuthEffects = __decorate([
     Injectable(),
     __param(0, Inject(AUTH_RESET_ACTIONS)),
-    __param(1, Inject(AUTH_TRADUCTIONS))
+    __param(1, Inject(AUTH_TRADUCTIONS)),
+    __param(2, Inject(PLATFORM_ID))
 ], AuthEffects);
 
 var AuthModule_1;
