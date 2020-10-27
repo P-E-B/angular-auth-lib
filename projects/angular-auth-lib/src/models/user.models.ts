@@ -3,7 +3,7 @@ export interface Token {
     expiringDate: Date;
 }
 
-export interface User {
+export interface BaseUser {
     id: number;
     username?: string;
     firstName: string;
@@ -15,4 +15,8 @@ export interface User {
     allowedUrls: string[];
     token?: Token;
     password?: string;
+}
+
+export interface User extends BaseUser {
+    [attribute: string]: any;
 }
