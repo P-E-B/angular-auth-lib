@@ -12,6 +12,7 @@ import { AuthState } from './reducer';
 export declare class AuthEffects {
     private resetActions;
     private traductions;
+    private platformId;
     private actions;
     private authService;
     private router;
@@ -19,7 +20,7 @@ export declare class AuthEffects {
     private dialog;
     private store;
     private dialogRef;
-    constructor(resetActions: any[], traductions: AuthModuleConfig['traductions'], actions: Actions, authService: AuthService, router: Router, toastService: ToastrService, dialog: MatDialog, store: Store<AuthState>);
+    constructor(resetActions: any[], traductions: AuthModuleConfig['traductions'], platformId: any, actions: Actions, authService: AuthService, router: Router, toastService: ToastrService, dialog: MatDialog, store: Store<AuthState>);
     OpenSignUpDialog$: import("rxjs").Observable<never>;
     SignUp$: import("rxjs").Observable<SignUpSuccess | SignUpFailure>;
     SignUpSuccess$: import("rxjs").Observable<never>;

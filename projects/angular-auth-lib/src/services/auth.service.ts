@@ -1,9 +1,10 @@
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { User, Token } from '../models/user.models';
 import { map } from 'rxjs/operators';
 import { Observable } from 'rxjs';
 import { AUTH_API_URLS, AuthModuleConfig } from '../token';
+import { isPlatformBrowser } from '@angular/common';
 
 
 @Injectable({
@@ -13,6 +14,7 @@ export class AuthService {
 
   constructor(
     @Inject(AUTH_API_URLS) private apiUrls: AuthModuleConfig['urls'],
+    @Inject(PLATFORM_ID) private platformId: any,
     private http: HttpClient
   ) { }
 
@@ -24,7 +26,7 @@ export class AuthService {
   }
 
   public getToken(): Token {
-    const token = sessionStorage.getItem('token');
+    const token = isPlatformBrowser(this.platformId) ? sessionStorage.getItem('token') : null;
     return token ? this.decodeToken(token) : null;
   }
 

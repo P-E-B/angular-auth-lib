@@ -1,8 +1,8 @@
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/common/http'), require('rxjs/operators'), require('@angular/router'), require('@ngrx/store'), require('@angular/forms'), require('lodash'), require('@angular/material/dialog'), require('@angular/common'), require('@angular/material/input'), require('@angular/material/card'), require('@angular/material/button'), require('@angular/material/progress-spinner'), require('@angular/platform-browser/animations'), require('@ngrx/effects'), require('ngx-toastr'), require('rxjs')) :
-    typeof define === 'function' && define.amd ? define('angular-auth-lib', ['exports', '@angular/core', '@angular/common/http', 'rxjs/operators', '@angular/router', '@ngrx/store', '@angular/forms', 'lodash', '@angular/material/dialog', '@angular/common', '@angular/material/input', '@angular/material/card', '@angular/material/button', '@angular/material/progress-spinner', '@angular/platform-browser/animations', '@ngrx/effects', 'ngx-toastr', 'rxjs'], factory) :
-    (global = global || self, factory(global['angular-auth-lib'] = {}, global.ng.core, global.ng.common.http, global.rxjs.operators, global.ng.router, global['@ngrx/store'], global.ng.forms, global.lodash, global.ng.material.dialog, global.ng.common, global.ng.material.input, global.ng.material.card, global.ng.material.button, global.ng.material.progressSpinner, global.ng.platformBrowser.animations, global['@ngrx/effects'], global['ngx-toastr'], global.rxjs));
-}(this, (function (exports, core, http, operators, router, store, forms, lodash, dialog, common, input, card, button, progressSpinner, animations, effects, ngxToastr, rxjs) { 'use strict';
+    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/common/http'), require('rxjs/operators'), require('@angular/common'), require('@angular/router'), require('@ngrx/store'), require('@angular/forms'), require('lodash'), require('@angular/material/dialog'), require('@angular/material/input'), require('@angular/material/card'), require('@angular/material/button'), require('@angular/material/progress-spinner'), require('@angular/platform-browser/animations'), require('@ngrx/effects'), require('ngx-toastr'), require('rxjs')) :
+    typeof define === 'function' && define.amd ? define('angular-auth-lib', ['exports', '@angular/core', '@angular/common/http', 'rxjs/operators', '@angular/common', '@angular/router', '@ngrx/store', '@angular/forms', 'lodash', '@angular/material/dialog', '@angular/material/input', '@angular/material/card', '@angular/material/button', '@angular/material/progress-spinner', '@angular/platform-browser/animations', '@ngrx/effects', 'ngx-toastr', 'rxjs'], factory) :
+    (global = global || self, factory(global['angular-auth-lib'] = {}, global.ng.core, global.ng.common.http, global.rxjs.operators, global.ng.common, global.ng.router, global['@ngrx/store'], global.ng.forms, global.lodash, global.ng.material.dialog, global.ng.material.input, global.ng.material.card, global.ng.material.button, global.ng.material.progressSpinner, global.ng.platformBrowser.animations, global['@ngrx/effects'], global['ngx-toastr'], global.rxjs));
+}(this, (function (exports, core, http, operators, common, router, store, forms, lodash, dialog, input, card, button, progressSpinner, animations, effects, ngxToastr, rxjs) { 'use strict';
 
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation. All rights reserved.
@@ -225,8 +225,9 @@
     var AUTH_STYLES = new core.InjectionToken('Styling');
 
     var AuthService = /** @class */ (function () {
-        function AuthService(apiUrls, http) {
+        function AuthService(apiUrls, platformId, http) {
             this.apiUrls = apiUrls;
+            this.platformId = platformId;
             this.http = http;
         }
         AuthService.prototype.decodeToken = function (token) {
@@ -236,7 +237,7 @@
             return { token: token, expiringDate: expiringDate };
         };
         AuthService.prototype.getToken = function () {
-            var token = sessionStorage.getItem('token');
+            var token = common.isPlatformBrowser(this.platformId) ? sessionStorage.getItem('token') : null;
             return token ? this.decodeToken(token) : null;
         };
         AuthService.prototype.getAccessToken = function (user) {
@@ -269,14 +270,16 @@
         };
         AuthService.ctorParameters = function () { return [
             { type: undefined, decorators: [{ type: core.Inject, args: [AUTH_API_URLS,] }] },
+            { type: undefined, decorators: [{ type: core.Inject, args: [core.PLATFORM_ID,] }] },
             { type: http.HttpClient }
         ]; };
-        AuthService.ɵprov = core.ɵɵdefineInjectable({ factory: function AuthService_Factory() { return new AuthService(core.ɵɵinject(AUTH_API_URLS), core.ɵɵinject(http.HttpClient)); }, token: AuthService, providedIn: "root" });
+        AuthService.ɵprov = core.ɵɵdefineInjectable({ factory: function AuthService_Factory() { return new AuthService(core.ɵɵinject(AUTH_API_URLS), core.ɵɵinject(core.PLATFORM_ID), core.ɵɵinject(http.HttpClient)); }, token: AuthService, providedIn: "root" });
         AuthService = __decorate([
             core.Injectable({
                 providedIn: 'root'
             }),
-            __param(0, core.Inject(AUTH_API_URLS))
+            __param(0, core.Inject(AUTH_API_URLS)),
+            __param(1, core.Inject(core.PLATFORM_ID))
         ], AuthService);
         return AuthService;
     }());
@@ -296,9 +299,10 @@
     var selectIsSignUpLoading = store.createSelector(selectAuthState, ɵ5);
 
     var AuthGuard = /** @class */ (function () {
-        function AuthGuard(store, router) {
+        function AuthGuard(store, router, platformId) {
             this.store = store;
             this.router = router;
+            this.platformId = platformId;
         }
         AuthGuard.prototype.canActivate = function (route, state) {
             var _this = this;
@@ -308,7 +312,7 @@
                     return true;
                 }
                 else {
-                    if (user && user.allowedUrls.includes(route.routeConfig.path)) {
+                    if (user && user.allowedUrls.includes(route.routeConfig.path) && common.isPlatformBrowser(_this.platformId)) {
                         sessionStorage.setItem('redirectedUrlAfterLogIn', state.url);
                     }
                     _this.router.navigate(['log-in']);
@@ -318,13 +322,15 @@
         };
         AuthGuard.ctorParameters = function () { return [
             { type: store.Store },
-            { type: router.Router }
+            { type: router.Router },
+            { type: undefined, decorators: [{ type: core.Inject, args: [core.PLATFORM_ID,] }] }
         ]; };
-        AuthGuard.ɵprov = core.ɵɵdefineInjectable({ factory: function AuthGuard_Factory() { return new AuthGuard(core.ɵɵinject(store.Store), core.ɵɵinject(router.Router)); }, token: AuthGuard, providedIn: "root" });
+        AuthGuard.ɵprov = core.ɵɵdefineInjectable({ factory: function AuthGuard_Factory() { return new AuthGuard(core.ɵɵinject(store.Store), core.ɵɵinject(router.Router), core.ɵɵinject(core.PLATFORM_ID)); }, token: AuthGuard, providedIn: "root" });
         AuthGuard = __decorate([
             core.Injectable({
                 providedIn: 'root'
-            })
+            }),
+            __param(2, core.Inject(core.PLATFORM_ID))
         ], AuthGuard);
         return AuthGuard;
     }());
@@ -699,10 +705,11 @@
     }
 
     var AuthEffects = /** @class */ (function () {
-        function AuthEffects(resetActions, traductions, actions, authService, router, toastService, dialog, store$1) {
+        function AuthEffects(resetActions, traductions, platformId, actions, authService, router, toastService, dialog, store$1) {
             var _this = this;
             this.resetActions = resetActions;
             this.traductions = traductions;
+            this.platformId = platformId;
             this.actions = actions;
             this.authService = authService;
             this.router = router;
@@ -715,17 +722,17 @@
                 _this.toastService.success(lodash.get(_this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!'));
             }));
             this.SignUpFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE), operators.tap(function (error) { return _this.toastService.error(lodash.get(_this.traductions || {}, 'messages.signupFailure', 'Please try again with a new username.')); }));
-            this.LogIn$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN), operators.map(function (action) { return action.payload; }), operators.switchMap(function (user) { return _this.authService.login(user).pipe(operators.concatMap(function (loggedInUser) {
+            this.LogIn$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN), operators.filter(function (action) { return common.isPlatformBrowser(_this.platformId); }), operators.map(function (action) { return action.payload; }), operators.switchMap(function (user) { return _this.authService.login(user).pipe(operators.concatMap(function (loggedInUser) {
                 sessionStorage.setItem('token', loggedInUser.token.token);
                 return _this.authService.getUserInformation().pipe(operators.map(function (_a) {
                     var user = _a.user, usersList = _a.usersList;
                     return new LogInSuccess({ user: user, usersList: usersList });
                 }), operators.catchError(function (error) { return rxjs.of(new LogInFailure(error)); }));
             }), operators.catchError(function (error) { return rxjs.of(new LogInFailure(error)); })); }));
-            this.LogInSuccess$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS), operators.withLatestFrom(this.store.pipe(store.select(selectUser))), operators.tap(function (_a) {
+            this.LogInSuccess$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS), operators.filter(function (action) { return common.isPlatformBrowser(_this.platformId); }), operators.withLatestFrom(this.store.pipe(store.select(selectUser))), operators.tap(function (_a) {
                 var _b = __read(_a, 2), action = _b[0], user = _b[1];
                 var redirectedUrlAfterLogIn = sessionStorage.getItem('redirectedUrlAfterLogIn');
-                if (redirectedUrlAfterLogIn) {
+                if (redirectedUrlAfterLogIn && common.isPlatformBrowser(_this.platformId)) {
                     _this.router.navigateByUrl(redirectedUrlAfterLogIn);
                     sessionStorage.removeItem('redirectedUrlAfterLogIn');
                 }
@@ -735,7 +742,7 @@
                 _this.toastService.success(lodash.get(_this.traductions || {}, 'messages.loginSuccess', 'Hi! Nice to see you again!'));
             }));
             this.LogInFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN_FAILURE), operators.tap(function (error) { return _this.toastService.error(lodash.get(_this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')); }));
-            this.LogOut$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_OUT), operators.switchMap(function (action) {
+            this.LogOut$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_OUT), operators.filter(function (action) { return common.isPlatformBrowser(_this.platformId); }), operators.switchMap(function (action) {
                 sessionStorage.removeItem('token');
                 _this.router.navigate(['log-in']);
                 return (_this.resetActions || []).map(function (resetAction) { return new resetAction(); });
@@ -757,6 +764,7 @@
         AuthEffects.ctorParameters = function () { return [
             { type: Array, decorators: [{ type: core.Inject, args: [AUTH_RESET_ACTIONS,] }] },
             { type: undefined, decorators: [{ type: core.Inject, args: [AUTH_TRADUCTIONS,] }] },
+            { type: undefined, decorators: [{ type: core.Inject, args: [core.PLATFORM_ID,] }] },
             { type: effects.Actions },
             { type: AuthService },
             { type: router.Router },
@@ -815,7 +823,8 @@
         AuthEffects = __decorate([
             core.Injectable(),
             __param(0, core.Inject(AUTH_RESET_ACTIONS)),
-            __param(1, core.Inject(AUTH_TRADUCTIONS))
+            __param(1, core.Inject(AUTH_TRADUCTIONS)),
+            __param(2, core.Inject(core.PLATFORM_ID))
         ], AuthEffects);
         return AuthEffects;
     }());

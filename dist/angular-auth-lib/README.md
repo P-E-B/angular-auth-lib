@@ -24,6 +24,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.10**: Adding support for SSR
 * **0.0.9**: Adding `isSignUpLoading` selector
 * **0.0.8**: Improving README.md
 * **0.0.7**: Improving README.md and `auth.service.ts`
@@ -218,11 +219,11 @@ export interface Token {
 
 export interface User {
     id: number;
-    username: string;
+    username?: string;
     firstName: string;
     lastName: string;
     email: string;
-    enterprise: string;
+    enterprise?: string;
     dateJoined: Date;
     redirectUrlAfterLogin: string;
     allowedUrls: string[];

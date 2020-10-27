@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { Router } from '@angular/router';
 import { Actions, Effect, ofType } from '@ngrx/effects';
 import { of } from 'rxjs';
@@ -6,7 +6,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ToastrService } from 'ngx-toastr';
 import { Store, select } from '@ngrx/store';
 import { MatDialogRef, MatDialog } from '@angular/material/dialog';
-import { map, switchMap, catchError, tap, withLatestFrom, concatMap } from 'rxjs/operators';
+import { map, switchMap, catchError, tap, withLatestFrom, concatMap, filter } from 'rxjs/operators';
 
 import { get } from 'lodash';
 
@@ -36,6 +36,7 @@ import { ForgottenPasswordComponent } from '../components/forgotten-password/for
 import { AUTH_RESET_ACTIONS, AUTH_TRADUCTIONS, AuthModuleConfig } from '../token';
 import { AuthState } from './reducer';
 import { SignUpComponent } from '../components/sign-up/sign-up.component';
+import { isPlatformBrowser } from '@angular/common';
 
 
 @Injectable()
@@ -45,6 +46,7 @@ export class AuthEffects {
   constructor(
     @Inject(AUTH_RESET_ACTIONS) private resetActions: any[],
     @Inject(AUTH_TRADUCTIONS) private traductions: AuthModuleConfig['traductions'],
+    @Inject(PLATFORM_ID) private platformId: any,
     private actions: Actions,
     private authService: AuthService,
     private router: Router,
@@ -90,6 +92,7 @@ export class AuthEffects {
   @Effect()
   LogIn$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.LOG_IN),
+    filter((action: LogIn) => isPlatformBrowser(this.platformId)),
     map((action: LogIn) => action.payload),
     switchMap((user: User) => this.authService.login(user).pipe(
       concatMap((loggedInUser: User) => {
@@ -106,10 +109,11 @@ export class AuthEffects {
   @Effect({ dispatch: false })
   LogInSuccess$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS),
+    filter((action: LogInSuccess) => isPlatformBrowser(this.platformId)),
     withLatestFrom(this.store.pipe(select(selectUser))),
     tap(([action, user]: [LogInSuccess, User]) => {
       const redirectedUrlAfterLogIn = sessionStorage.getItem('redirectedUrlAfterLogIn');
-      if (redirectedUrlAfterLogIn) {
+      if (redirectedUrlAfterLogIn && isPlatformBrowser(this.platformId)) {
         this.router.navigateByUrl(redirectedUrlAfterLogIn)
         sessionStorage.removeItem('redirectedUrlAfterLogIn');
       } else {
@@ -132,6 +136,7 @@ export class AuthEffects {
   @Effect()
   LogOut$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.LOG_OUT),
+    filter((action: LogOut) => isPlatformBrowser(this.platformId)),
     switchMap((action: LogOut) => {
       sessionStorage.removeItem('token');
       this.router.navigate(['log-in']);

@@ -5,11 +5,11 @@ export interface Token {
 
 export interface User {
     id: number;
-    username: string;
+    username?: string;
     firstName: string;
     lastName: string;
     email: string;
-    enterprise: string;
+    enterprise?: string;
     dateJoined: Date;
     redirectUrlAfterLogin: string;
     allowedUrls: string[];

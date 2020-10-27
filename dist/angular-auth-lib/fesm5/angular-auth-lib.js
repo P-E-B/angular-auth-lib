@@ -1,13 +1,13 @@
 import { __assign, __decorate, __param, __read } from 'tslib';
-import { InjectionToken, Inject, ɵɵdefineInjectable, ɵɵinject, Injectable, Component, ViewChild, NgModule } from '@angular/core';
+import { InjectionToken, Inject, PLATFORM_ID, ɵɵdefineInjectable, ɵɵinject, Injectable, Component, ViewChild, NgModule } from '@angular/core';
 import { HttpClient, HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
-import { map, withLatestFrom, tap, switchMap, catchError, concatMap } from 'rxjs/operators';
+import { map, withLatestFrom, tap, switchMap, catchError, filter, concatMap } from 'rxjs/operators';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { createFeatureSelector, createSelector, select, Store, StoreModule } from '@ngrx/store';
 import { Validators, FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { get } from 'lodash';
 import { MatDialogRef, MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { CommonModule } from '@angular/common';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,8 +24,9 @@ var AUTH_RESET_ACTIONS = new InjectionToken('Reset actions');
 var AUTH_STYLES = new InjectionToken('Styling');
 
 var AuthService = /** @class */ (function () {
-    function AuthService(apiUrls, http) {
+    function AuthService(apiUrls, platformId, http) {
         this.apiUrls = apiUrls;
+        this.platformId = platformId;
         this.http = http;
     }
     AuthService.prototype.decodeToken = function (token) {
@@ -35,7 +36,7 @@ var AuthService = /** @class */ (function () {
         return { token: token, expiringDate: expiringDate };
     };
     AuthService.prototype.getToken = function () {
-        var token = sessionStorage.getItem('token');
+        var token = isPlatformBrowser(this.platformId) ? sessionStorage.getItem('token') : null;
         return token ? this.decodeToken(token) : null;
     };
     AuthService.prototype.getAccessToken = function (user) {
@@ -68,14 +69,16 @@ var AuthService = /** @class */ (function () {
     };
     AuthService.ctorParameters = function () { return [
         { type: undefined, decorators: [{ type: Inject, args: [AUTH_API_URLS,] }] },
+        { type: undefined, decorators: [{ type: Inject, args: [PLATFORM_ID,] }] },
         { type: HttpClient }
     ]; };
-    AuthService.ɵprov = ɵɵdefineInjectable({ factory: function AuthService_Factory() { return new AuthService(ɵɵinject(AUTH_API_URLS), ɵɵinject(HttpClient)); }, token: AuthService, providedIn: "root" });
+    AuthService.ɵprov = ɵɵdefineInjectable({ factory: function AuthService_Factory() { return new AuthService(ɵɵinject(AUTH_API_URLS), ɵɵinject(PLATFORM_ID), ɵɵinject(HttpClient)); }, token: AuthService, providedIn: "root" });
     AuthService = __decorate([
         Injectable({
             providedIn: 'root'
         }),
-        __param(0, Inject(AUTH_API_URLS))
+        __param(0, Inject(AUTH_API_URLS)),
+        __param(1, Inject(PLATFORM_ID))
     ], AuthService);
     return AuthService;
 }());
@@ -95,9 +98,10 @@ var ɵ5 = function (state) { return state.isSignUpLoading; };
 var selectIsSignUpLoading = createSelector(selectAuthState, ɵ5);
 
 var AuthGuard = /** @class */ (function () {
-    function AuthGuard(store, router) {
+    function AuthGuard(store, router, platformId) {
         this.store = store;
         this.router = router;
+        this.platformId = platformId;
     }
     AuthGuard.prototype.canActivate = function (route, state) {
         var _this = this;
@@ -107,7 +111,7 @@ var AuthGuard = /** @class */ (function () {
                 return true;
             }
             else {
-                if (user && user.allowedUrls.includes(route.routeConfig.path)) {
+                if (user && user.allowedUrls.includes(route.routeConfig.path) && isPlatformBrowser(_this.platformId)) {
                     sessionStorage.setItem('redirectedUrlAfterLogIn', state.url);
                 }
                 _this.router.navigate(['log-in']);
@@ -117,13 +121,15 @@ var AuthGuard = /** @class */ (function () {
     };
     AuthGuard.ctorParameters = function () { return [
         { type: Store },
-        { type: Router }
+        { type: Router },
+        { type: undefined, decorators: [{ type: Inject, args: [PLATFORM_ID,] }] }
     ]; };
-    AuthGuard.ɵprov = ɵɵdefineInjectable({ factory: function AuthGuard_Factory() { return new AuthGuard(ɵɵinject(Store), ɵɵinject(Router)); }, token: AuthGuard, providedIn: "root" });
+    AuthGuard.ɵprov = ɵɵdefineInjectable({ factory: function AuthGuard_Factory() { return new AuthGuard(ɵɵinject(Store), ɵɵinject(Router), ɵɵinject(PLATFORM_ID)); }, token: AuthGuard, providedIn: "root" });
     AuthGuard = __decorate([
         Injectable({
             providedIn: 'root'
-        })
+        }),
+        __param(2, Inject(PLATFORM_ID))
     ], AuthGuard);
     return AuthGuard;
 }());
@@ -498,10 +504,11 @@ function authReducer(state, action) {
 }
 
 var AuthEffects = /** @class */ (function () {
-    function AuthEffects(resetActions, traductions, actions, authService, router, toastService, dialog, store) {
+    function AuthEffects(resetActions, traductions, platformId, actions, authService, router, toastService, dialog, store) {
         var _this = this;
         this.resetActions = resetActions;
         this.traductions = traductions;
+        this.platformId = platformId;
         this.actions = actions;
         this.authService = authService;
         this.router = router;
@@ -514,17 +521,17 @@ var AuthEffects = /** @class */ (function () {
             _this.toastService.success(get(_this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!'));
         }));
         this.SignUpFailure$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE), tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.signupFailure', 'Please try again with a new username.')); }));
-        this.LogIn$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN), map(function (action) { return action.payload; }), switchMap(function (user) { return _this.authService.login(user).pipe(concatMap(function (loggedInUser) {
+        this.LogIn$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN), filter(function (action) { return isPlatformBrowser(_this.platformId); }), map(function (action) { return action.payload; }), switchMap(function (user) { return _this.authService.login(user).pipe(concatMap(function (loggedInUser) {
             sessionStorage.setItem('token', loggedInUser.token.token);
             return _this.authService.getUserInformation().pipe(map(function (_a) {
                 var user = _a.user, usersList = _a.usersList;
                 return new LogInSuccess({ user: user, usersList: usersList });
             }), catchError(function (error) { return of(new LogInFailure(error)); }));
         }), catchError(function (error) { return of(new LogInFailure(error)); })); }));
-        this.LogInSuccess$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS), withLatestFrom(this.store.pipe(select(selectUser))), tap(function (_a) {
+        this.LogInSuccess$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS), filter(function (action) { return isPlatformBrowser(_this.platformId); }), withLatestFrom(this.store.pipe(select(selectUser))), tap(function (_a) {
             var _b = __read(_a, 2), action = _b[0], user = _b[1];
             var redirectedUrlAfterLogIn = sessionStorage.getItem('redirectedUrlAfterLogIn');
-            if (redirectedUrlAfterLogIn) {
+            if (redirectedUrlAfterLogIn && isPlatformBrowser(_this.platformId)) {
                 _this.router.navigateByUrl(redirectedUrlAfterLogIn);
                 sessionStorage.removeItem('redirectedUrlAfterLogIn');
             }
@@ -534,7 +541,7 @@ var AuthEffects = /** @class */ (function () {
             _this.toastService.success(get(_this.traductions || {}, 'messages.loginSuccess', 'Hi! Nice to see you again!'));
         }));
         this.LogInFailure$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN_FAILURE), tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')); }));
-        this.LogOut$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_OUT), switchMap(function (action) {
+        this.LogOut$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_OUT), filter(function (action) { return isPlatformBrowser(_this.platformId); }), switchMap(function (action) {
             sessionStorage.removeItem('token');
             _this.router.navigate(['log-in']);
             return (_this.resetActions || []).map(function (resetAction) { return new resetAction(); });
@@ -556,6 +563,7 @@ var AuthEffects = /** @class */ (function () {
     AuthEffects.ctorParameters = function () { return [
         { type: Array, decorators: [{ type: Inject, args: [AUTH_RESET_ACTIONS,] }] },
         { type: undefined, decorators: [{ type: Inject, args: [AUTH_TRADUCTIONS,] }] },
+        { type: undefined, decorators: [{ type: Inject, args: [PLATFORM_ID,] }] },
         { type: Actions },
         { type: AuthService },
         { type: Router },
@@ -614,7 +622,8 @@ var AuthEffects = /** @class */ (function () {
     AuthEffects = __decorate([
         Injectable(),
         __param(0, Inject(AUTH_RESET_ACTIONS)),
-        __param(1, Inject(AUTH_TRADUCTIONS))
+        __param(1, Inject(AUTH_TRADUCTIONS)),
+        __param(2, Inject(PLATFORM_ID))
     ], AuthEffects);
     return AuthEffects;
 }());

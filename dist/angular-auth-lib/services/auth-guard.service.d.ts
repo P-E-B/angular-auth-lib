@@ -5,6 +5,7 @@ import { AuthState } from '../store/reducer';
 export declare class AuthGuard implements CanActivate {
     private store;
     private router;
-    constructor(store: Store<AuthState>, router: Router);
+    private platformId;
+    constructor(store: Store<AuthState>, router: Router, platformId: any);
     canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean>;
 }
