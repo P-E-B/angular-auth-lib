@@ -232,7 +232,7 @@ export interface BaseUser {
     password?: string; // only when user sends its password to the backend for login. This should not be present afterwards.
 }
 
-export interface User extends BaseUser {
+export interface User extends BaseUser { // to be used by your application when needed
     [attribute: string]: any;
 }
 ```
