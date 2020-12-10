@@ -15,7 +15,7 @@
         mat-raised-button
         type="submit" 
         [disabled]="userForm.invalid"
-        *ngIf="!(isPasswordBeingChanged$ | async)"
+        *ngIf="!(isPasswordBeingChanged$ | async) && !(isLoginLoading$ | async)"
         [ngStyle]="{
           'background-color': buttonsBackgroundColor,
           'color': buttonsColor
@@ -23,7 +23,7 @@
       >
         {{ loginButtonTraduction }}
       </button>
-      <mat-spinner *ngIf="isPasswordBeingChanged$ | async" [diameter]="36"></mat-spinner>
+      <mat-spinner *ngIf="(isPasswordBeingChanged$ | async) || (isLoginLoading$ | async)" [diameter]="36"></mat-spinner>
 
       <a (click)="openDialog()">{{ forgottenPassword }}</a>
     </form>

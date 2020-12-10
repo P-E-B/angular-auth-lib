@@ -24,6 +24,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.13**: Adding isLoading selector
 * **0.0.12**: Adding UpdateUser action to manage user in real time
 * **0.0.11**: Adding BaseUser interface and User is now extending it
 * **0.0.10**: Adding support for SSR

@@ -19,7 +19,8 @@ export declare enum AUTH_ACTIONS_TYPE {
     OPEN_FORGOTTEN_PASSWORD_DIALOG = "[Auth] User opens dialog for password resetting",
     SEND_PASSWORD = "[Auth] User has asked for having back a new password",
     SEND_PASSWORD_SUCCESS = "[Auth] User has received his password",
-    SEND_PASSWORD_FAILURE = "[Auth] Error in the process of sending the password to the user"
+    SEND_PASSWORD_FAILURE = "[Auth] Error in the process of sending the password to the user",
+    UPDATE_USER = "[Auth] Update of user"
 }
 export declare class OpenSignUpDialog implements Action {
     readonly type = AUTH_ACTIONS_TYPE.OPEN_SIGN_UP_DIALOG;
@@ -117,4 +118,9 @@ export declare class SendPasswordFailure implements Action {
     readonly type = AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE;
     constructor(payload: HttpErrorResponse);
 }
-export declare type Actions = OpenSignUpDialog | SignUp | SignUpSuccess | SignUpFailure | LogIn | LogInSuccess | LogInFailure | LogOut | LoadUserInformation | LoadUserInformationSuccess | LoadUserInformationFailure | ChangePassword | ChangePasswordSuccess | ChangePasswordFailure | OpenForgottenPasswordDialog | SendPassword | SendPasswordSuccess | SendPasswordFailure;
+export declare class UpdateUser implements Action {
+    payload: Partial<User>;
+    readonly type = AUTH_ACTIONS_TYPE.UPDATE_USER;
+    constructor(payload: Partial<User>);
+}
+export declare type Actions = OpenSignUpDialog | SignUp | SignUpSuccess | SignUpFailure | LogIn | LogInSuccess | LogInFailure | LogOut | LoadUserInformation | LoadUserInformationSuccess | LoadUserInformationFailure | ChangePassword | ChangePasswordSuccess | ChangePasswordFailure | OpenForgottenPasswordDialog | SendPassword | SendPasswordSuccess | SendPasswordFailure | UpdateUser;

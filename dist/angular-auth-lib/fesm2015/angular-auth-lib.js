@@ -171,6 +171,7 @@ var AUTH_ACTIONS_TYPE;
     AUTH_ACTIONS_TYPE["SEND_PASSWORD"] = "[Auth] User has asked for having back a new password";
     AUTH_ACTIONS_TYPE["SEND_PASSWORD_SUCCESS"] = "[Auth] User has received his password";
     AUTH_ACTIONS_TYPE["SEND_PASSWORD_FAILURE"] = "[Auth] Error in the process of sending the password to the user";
+    AUTH_ACTIONS_TYPE["UPDATE_USER"] = "[Auth] Update of user";
 })(AUTH_ACTIONS_TYPE || (AUTH_ACTIONS_TYPE = {}));
 class OpenSignUpDialog {
     constructor() {
@@ -271,6 +272,12 @@ class SendPasswordFailure {
     constructor(payload) {
         this.payload = payload;
         this.type = AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE;
+    }
+}
+class UpdateUser {
+    constructor(payload) {
+        this.payload = payload;
+        this.type = AUTH_ACTIONS_TYPE.UPDATE_USER;
     }
 }
 
@@ -469,6 +476,8 @@ function authReducer(state = initialState, action) {
         case AUTH_ACTIONS_TYPE.SEND_PASSWORD_SUCCESS:
         case AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE:
             return Object.assign(Object.assign({}, state), { isPasswordBeingChanged: false });
+        case AUTH_ACTIONS_TYPE.UPDATE_USER:
+            return Object.assign(Object.assign({}, state), { user: Object.assign(Object.assign({}, state.user), action.payload) });
         default:
             return state;
     }
@@ -642,5 +651,5 @@ AuthModule = AuthModule_1 = __decorate([
  * Generated bundle index. Do not edit.
  */
 
-export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, authReducer, initialState, selectAuthState, selectIsAuthenticated, selectIsPasswordBeingChanged, selectIsSignUpLoading, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, ɵ5, AuthEffects as ɵa };
+export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, UpdateUser, authReducer, initialState, selectAuthState, selectIsAuthenticated, selectIsPasswordBeingChanged, selectIsSignUpLoading, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, ɵ5, AuthEffects as ɵa };
 //# sourceMappingURL=angular-auth-lib.js.map

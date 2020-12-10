@@ -7,7 +7,7 @@ import { get } from 'lodash';
 import { User } from '../../models/user.models';
 import { AuthState } from '../../store/reducer';
 import { OpenForgottenPasswordDialog, LogIn } from '../../store/actions';
-import { selectIsPasswordBeingChanged } from '../../store/selectors';
+import { selectIsPasswordBeingChanged, selectIsLoginLoading } from '../../store/selectors';
 import { AUTH_IMAGES_URLS, AuthModuleConfig, AUTH_TRADUCTIONS, AUTH_STYLES } from '../../token';
 
 @Component({
@@ -17,6 +17,7 @@ import { AUTH_IMAGES_URLS, AuthModuleConfig, AUTH_TRADUCTIONS, AUTH_STYLES } fro
 })
 export class LogInComponent implements OnInit {
   isPasswordBeingChanged$ = this.store.pipe(select(selectIsPasswordBeingChanged));
+  isLoginLoading$ = this.store.pipe(select(selectIsLoginLoading));
   userForm: FormGroup;
 
   usernamePlaceholder = 'Username';

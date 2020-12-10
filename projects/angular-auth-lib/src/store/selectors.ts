@@ -32,3 +32,8 @@ export const selectIsSignUpLoading = createSelector(
     selectAuthState,
     (state: AuthState) => state.isSignUpLoading
 );
+
+export const selectIsLoginLoading = createSelector(
+    selectAuthState,
+    (state: AuthState) => state.isLoginLoading
+);

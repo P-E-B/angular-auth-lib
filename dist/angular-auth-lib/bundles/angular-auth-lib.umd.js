@@ -379,6 +379,7 @@
         AUTH_ACTIONS_TYPE["SEND_PASSWORD"] = "[Auth] User has asked for having back a new password";
         AUTH_ACTIONS_TYPE["SEND_PASSWORD_SUCCESS"] = "[Auth] User has received his password";
         AUTH_ACTIONS_TYPE["SEND_PASSWORD_FAILURE"] = "[Auth] Error in the process of sending the password to the user";
+        AUTH_ACTIONS_TYPE["UPDATE_USER"] = "[Auth] Update of user";
     })(exports.AUTH_ACTIONS_TYPE || (exports.AUTH_ACTIONS_TYPE = {}));
     var OpenSignUpDialog = /** @class */ (function () {
         function OpenSignUpDialog() {
@@ -498,6 +499,13 @@
             this.type = exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE;
         }
         return SendPasswordFailure;
+    }());
+    var UpdateUser = /** @class */ (function () {
+        function UpdateUser(payload) {
+            this.payload = payload;
+            this.type = exports.AUTH_ACTIONS_TYPE.UPDATE_USER;
+        }
+        return UpdateUser;
     }());
 
     var LogInComponent = /** @class */ (function () {
@@ -699,6 +707,8 @@
             case exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD_SUCCESS:
             case exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE:
                 return __assign(__assign({}, state), { isPasswordBeingChanged: false });
+            case exports.AUTH_ACTIONS_TYPE.UPDATE_USER:
+                return __assign(__assign({}, state), { user: __assign(__assign({}, state.user), action.payload) });
             default:
                 return state;
         }
@@ -907,6 +917,7 @@
     exports.SignUpFailure = SignUpFailure;
     exports.SignUpSuccess = SignUpSuccess;
     exports.TokenInterceptor = TokenInterceptor;
+    exports.UpdateUser = UpdateUser;
     exports.authReducer = authReducer;
     exports.initialState = initialState;
     exports.selectAuthState = selectAuthState;
