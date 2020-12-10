@@ -45,6 +45,8 @@ export function authReducer(state: AuthState = initialState, action: UserActions
         case UserActions.AUTH_ACTIONS_TYPE.SEND_PASSWORD_SUCCESS:
         case UserActions.AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE:
             return { ...state, isPasswordBeingChanged: false };
+        case UserActions.AUTH_ACTIONS_TYPE.UPDATE_USER:
+            return { ...state, user: { ...state.user, ...action.payload }};
         default:
             return state;
     }

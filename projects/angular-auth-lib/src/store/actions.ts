@@ -25,7 +25,9 @@ export enum AUTH_ACTIONS_TYPE {
     OPEN_FORGOTTEN_PASSWORD_DIALOG = '[Auth] User opens dialog for password resetting',
     SEND_PASSWORD = '[Auth] User has asked for having back a new password',
     SEND_PASSWORD_SUCCESS = '[Auth] User has received his password',
-    SEND_PASSWORD_FAILURE = '[Auth] Error in the process of sending the password to the user'
+    SEND_PASSWORD_FAILURE = '[Auth] Error in the process of sending the password to the user',
+
+    UPDATE_USER = '[Auth] Update of user'
 }
 
 export class OpenSignUpDialog implements Action {
@@ -114,6 +116,11 @@ export class SendPasswordFailure implements Action {
     constructor(public payload: HttpErrorResponse) {}
 }
 
+export class UpdateUser implements Action {
+    readonly type = AUTH_ACTIONS_TYPE.UPDATE_USER;
+    constructor(public payload: Partial<User>) {}
+}
+
 export type Actions = OpenSignUpDialog
     | SignUp
     | SignUpSuccess
@@ -131,4 +138,5 @@ export type Actions = OpenSignUpDialog
     | OpenForgottenPasswordDialog
     | SendPassword
     | SendPasswordSuccess
-    | SendPasswordFailure;
+    | SendPasswordFailure
+    | UpdateUser;

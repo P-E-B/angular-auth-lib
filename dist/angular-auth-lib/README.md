@@ -24,6 +24,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.11**: Adding BaseUser interface and User is now extending it
 * **0.0.10**: Adding support for SSR
 * **0.0.9**: Adding `isSignUpLoading` selector
 * **0.0.8**: Improving README.md
@@ -217,7 +218,7 @@ export interface Token {
     expiringDate: Date;
 }
 
-export interface User {
+export interface BaseUser {
     id: number;
     username?: string;
     firstName: string;
@@ -229,6 +230,10 @@ export interface User {
     allowedUrls: string[];
     token?: Token;
     password?: string; // only when user sends its password to the backend for login. This should not be present afterwards.
+}
+
+export interface User extends BaseUser { // to be used by your application when needed
+    [attribute: string]: any;
 }
 ```
 
