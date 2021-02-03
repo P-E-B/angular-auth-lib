@@ -10,6 +10,7 @@ export declare class LogInComponent implements OnInit {
     private formBuilder;
     private store;
     isPasswordBeingChanged$: import("rxjs").Observable<boolean>;
+    isLoginLoading$: import("rxjs").Observable<boolean>;
     userForm: FormGroup;
     usernamePlaceholder: string;
     passwordPlaceholder: string;

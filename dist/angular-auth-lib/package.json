@@ -1,6 +1,6 @@
 {
   "name": "angular-auth-lib",
-  "version": "0.0.12",
+  "version": "0.0.14",
   "author": {
     "name": "Paul-Emile Brotons",
     "email": "paul.emile.brotons@gmail.com"
@@ -33,7 +33,7 @@
     "tslib": "^1.10.0",
     "rxjs": "^6.5.5",
     "ngx-toastr": "^12.0.1",
-    "lodash": "^4.17.15"
+    "lodash-es": "^4.17.20"
   },
   "main": "bundles/angular-auth-lib.umd.js",
   "module": "fesm5/angular-auth-lib.js",

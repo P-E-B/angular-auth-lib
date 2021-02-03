@@ -1,7 +1,7 @@
 import { Component, ViewChild, ElementRef, Inject, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 
-import { get } from 'lodash';
+import get from 'lodash-es/get';
 
 import { AuthState } from '../../store/reducer';
 import { SendPassword } from '../../store/actions';

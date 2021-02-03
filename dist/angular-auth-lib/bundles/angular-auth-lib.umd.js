@@ -1,8 +1,10 @@
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/common/http'), require('rxjs/operators'), require('@angular/common'), require('@angular/router'), require('@ngrx/store'), require('@angular/forms'), require('lodash'), require('@angular/material/dialog'), require('@angular/material/input'), require('@angular/material/card'), require('@angular/material/button'), require('@angular/material/progress-spinner'), require('@angular/platform-browser/animations'), require('@ngrx/effects'), require('ngx-toastr'), require('rxjs')) :
-    typeof define === 'function' && define.amd ? define('angular-auth-lib', ['exports', '@angular/core', '@angular/common/http', 'rxjs/operators', '@angular/common', '@angular/router', '@ngrx/store', '@angular/forms', 'lodash', '@angular/material/dialog', '@angular/material/input', '@angular/material/card', '@angular/material/button', '@angular/material/progress-spinner', '@angular/platform-browser/animations', '@ngrx/effects', 'ngx-toastr', 'rxjs'], factory) :
-    (global = global || self, factory(global['angular-auth-lib'] = {}, global.ng.core, global.ng.common.http, global.rxjs.operators, global.ng.common, global.ng.router, global['@ngrx/store'], global.ng.forms, global.lodash, global.ng.material.dialog, global.ng.material.input, global.ng.material.card, global.ng.material.button, global.ng.material.progressSpinner, global.ng.platformBrowser.animations, global['@ngrx/effects'], global['ngx-toastr'], global.rxjs));
-}(this, (function (exports, core, http, operators, common, router, store, forms, lodash, dialog, input, card, button, progressSpinner, animations, effects, ngxToastr, rxjs) { 'use strict';
+    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/common/http'), require('rxjs/operators'), require('@angular/common'), require('@angular/router'), require('@ngrx/store'), require('@angular/forms'), require('lodash-es/get'), require('@angular/material/dialog'), require('@angular/material/input'), require('@angular/material/card'), require('@angular/material/button'), require('@angular/material/progress-spinner'), require('@angular/platform-browser/animations'), require('@ngrx/effects'), require('ngx-toastr'), require('rxjs')) :
+    typeof define === 'function' && define.amd ? define('angular-auth-lib', ['exports', '@angular/core', '@angular/common/http', 'rxjs/operators', '@angular/common', '@angular/router', '@ngrx/store', '@angular/forms', 'lodash-es/get', '@angular/material/dialog', '@angular/material/input', '@angular/material/card', '@angular/material/button', '@angular/material/progress-spinner', '@angular/platform-browser/animations', '@ngrx/effects', 'ngx-toastr', 'rxjs'], factory) :
+    (global = global || self, factory(global['angular-auth-lib'] = {}, global.ng.core, global.ng.common.http, global.rxjs.operators, global.ng.common, global.ng.router, global['@ngrx/store'], global.ng.forms, global.get, global.ng.material.dialog, global.ng.material.input, global.ng.material.card, global.ng.material.button, global.ng.material.progressSpinner, global.ng.platformBrowser.animations, global['@ngrx/effects'], global['ngx-toastr'], global.rxjs));
+}(this, (function (exports, core, http, operators, common, router, store, forms, get, dialog, input, card, button, progressSpinner, animations, effects, ngxToastr, rxjs) { 'use strict';
+
+    get = get && Object.prototype.hasOwnProperty.call(get, 'default') ? get['default'] : get;
 
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation. All rights reserved.
@@ -297,6 +299,8 @@
     var selectUsersList = store.createSelector(selectAuthState, ɵ4); // list of colleagues of the current user for example
     var ɵ5 = function (state) { return state.isSignUpLoading; };
     var selectIsSignUpLoading = store.createSelector(selectAuthState, ɵ5);
+    var ɵ6 = function (state) { return state.isLoginLoading; };
+    var selectIsLoginLoading = store.createSelector(selectAuthState, ɵ6);
 
     var AuthGuard = /** @class */ (function () {
         function AuthGuard(store, router, platformId) {
@@ -516,6 +520,7 @@
             this.formBuilder = formBuilder;
             this.store = store$1;
             this.isPasswordBeingChanged$ = this.store.pipe(store.select(selectIsPasswordBeingChanged));
+            this.isLoginLoading$ = this.store.pipe(store.select(selectIsLoginLoading));
             this.usernamePlaceholder = 'Username';
             this.passwordPlaceholder = 'Password';
             this.forgottenPassword = 'Forgot your password?';
@@ -524,12 +529,12 @@
             this.buttonsColor = 'white';
         }
         LogInComponent.prototype.ngOnInit = function () {
-            this.usernamePlaceholder = lodash.get(this.traductions || {}, 'form.usernamePlaceholder', this.usernamePlaceholder);
-            this.passwordPlaceholder = lodash.get(this.traductions || {}, 'form.passwordPlaceholder', this.passwordPlaceholder);
-            this.forgottenPassword = lodash.get(this.traductions || {}, 'buttons.passwordForgotten', this.forgottenPassword);
-            this.loginButtonTraduction = lodash.get(this.traductions || {}, 'buttons.login', this.loginButtonTraduction);
-            this.buttonsBackgroundColor = lodash.get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
-            this.buttonsColor = lodash.get(this.styles || {}, 'buttonsColor', this.buttonsColor);
+            this.usernamePlaceholder = get(this.traductions || {}, 'form.usernamePlaceholder', this.usernamePlaceholder);
+            this.passwordPlaceholder = get(this.traductions || {}, 'form.passwordPlaceholder', this.passwordPlaceholder);
+            this.forgottenPassword = get(this.traductions || {}, 'buttons.passwordForgotten', this.forgottenPassword);
+            this.loginButtonTraduction = get(this.traductions || {}, 'buttons.login', this.loginButtonTraduction);
+            this.buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
+            this.buttonsColor = get(this.styles || {}, 'buttonsColor', this.buttonsColor);
             this.userForm = this.formBuilder.group({
                 username: ['', forms.Validators.required],
                 password: ['', forms.Validators.required]
@@ -555,7 +560,7 @@
         LogInComponent = __decorate([
             core.Component({
                 selector: 'auth-lib-log-in',
-                template: "<div id=\"container\" [ngStyle]=\"{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}\">\n  <mat-card class=\"mat-elevation-z8\">\n    <img *ngIf=\"images.logoImageUrl && images.logoImageUrl.length >= 1\" [src]=\"images.logoImageUrl\">\n    <form [formGroup]=\"userForm\" (ngSubmit)=\"onSubmit()\">\n\n      <mat-form-field>\n        <input matInput [placeholder]=\"usernamePlaceholder\" formControlName=\"username\">\n      </mat-form-field>\n\n      <mat-form-field>\n          <input matInput type=\"password\" [placeholder]=\"passwordPlaceholder\" formControlName=\"password\">\n      </mat-form-field>\n\n      <button \n        mat-raised-button\n        type=\"submit\" \n        [disabled]=\"userForm.invalid\"\n        *ngIf=\"!(isPasswordBeingChanged$ | async)\"\n        [ngStyle]=\"{\n          'background-color': buttonsBackgroundColor,\n          'color': buttonsColor\n        }\"\n      >\n        {{ loginButtonTraduction }}\n      </button>\n      <mat-spinner *ngIf=\"isPasswordBeingChanged$ | async\" [diameter]=\"36\"></mat-spinner>\n\n      <a (click)=\"openDialog()\">{{ forgottenPassword }}</a>\n    </form>\n  </mat-card>\n</div>\n",
+                template: "<div id=\"container\" [ngStyle]=\"{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}\">\n  <mat-card class=\"mat-elevation-z8\">\n    <img *ngIf=\"images.logoImageUrl && images.logoImageUrl.length >= 1\" [src]=\"images.logoImageUrl\">\n    <form [formGroup]=\"userForm\" (ngSubmit)=\"onSubmit()\">\n\n      <mat-form-field>\n        <input matInput [placeholder]=\"usernamePlaceholder\" formControlName=\"username\">\n      </mat-form-field>\n\n      <mat-form-field>\n          <input matInput type=\"password\" [placeholder]=\"passwordPlaceholder\" formControlName=\"password\">\n      </mat-form-field>\n\n      <button \n        mat-raised-button\n        type=\"submit\" \n        [disabled]=\"userForm.invalid\"\n        *ngIf=\"!(isPasswordBeingChanged$ | async) && !(isLoginLoading$ | async)\"\n        [ngStyle]=\"{\n          'background-color': buttonsBackgroundColor,\n          'color': buttonsColor\n        }\"\n      >\n        {{ loginButtonTraduction }}\n      </button>\n      <mat-spinner *ngIf=\"(isPasswordBeingChanged$ | async) || (isLoginLoading$ | async)\" [diameter]=\"36\"></mat-spinner>\n\n      <a (click)=\"openDialog()\">{{ forgottenPassword }}</a>\n    </form>\n  </mat-card>\n</div>\n",
                 styles: ["#container{display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;width:100%;flex:1;background-size:cover}#container mat-card{display:flex;flex-direction:column;justify-content:center;align-items:center;height:400px;width:400px;box-sizing:border-box;padding:2%}#container mat-card img{display:block;max-width:200px;max-height:100px;width:auto;height:auto;margin-bottom:20px}#container mat-card form{display:flex;flex:1;flex-direction:column;justify-content:center;align-items:center;width:100%}#container mat-card form mat-form-field{width:75%;font-size:16px}#container mat-card form a,#container mat-card form button,#container mat-card form mat-spinner{margin-top:20px}#container mat-card form a{cursor:pointer;color:#1e90ff;font-size:16px}"]
             }),
             __param(0, core.Inject(AUTH_IMAGES_URLS)),
@@ -576,10 +581,10 @@
             this.buttonsColor = 'white';
         }
         ForgottenPasswordComponent.prototype.ngOnInit = function () {
-            this.emailPlaceholder = lodash.get(this.traductions || {}, 'form.emailPlaceholder', this.emailPlaceholder);
-            this.sendButtonTraduction = lodash.get(this.traductions || {}, 'buttons.send', this.sendButtonTraduction);
-            this.buttonsBackgroundColor = lodash.get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
-            this.buttonsColor = lodash.get(this.styles || {}, 'buttonsColor', this.buttonsColor);
+            this.emailPlaceholder = get(this.traductions || {}, 'form.emailPlaceholder', this.emailPlaceholder);
+            this.sendButtonTraduction = get(this.traductions || {}, 'buttons.send', this.sendButtonTraduction);
+            this.buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
+            this.buttonsColor = get(this.styles || {}, 'buttonsColor', this.buttonsColor);
         };
         ForgottenPasswordComponent.prototype.send = function () {
             this.store.dispatch(new SendPassword(this.emailInput.nativeElement.value));
@@ -623,16 +628,16 @@
             this.buttonsColor = 'white';
         }
         SignUpComponent.prototype.ngOnInit = function () {
-            this.usernamePlaceholder = lodash.get(this.traductions || {}, 'form.usernamePlaceholder', this.usernamePlaceholder);
-            this.passwordPlaceholder = lodash.get(this.traductions || {}, 'form.passwordPlaceholder', this.passwordPlaceholder);
-            this.firstNamePlaceholder = lodash.get(this.traductions || {}, 'form.firstNamePlaceholder', this.firstNamePlaceholder);
-            this.lastNamePlaceholder = lodash.get(this.traductions || {}, 'form.lastNamePlaceholder', this.lastNamePlaceholder);
-            this.emailPlaceholder = lodash.get(this.traductions || {}, 'form.emailPlaceholder', this.emailPlaceholder);
-            this.enterprisePlaceholder = lodash.get(this.traductions || {}, 'form.enterprisePlaceholder', this.enterprisePlaceholder);
-            this.signUpDialogTitle = lodash.get(this.traductions || {}, 'dialogs.signup', this.signUpDialogTitle);
-            this.signupButtonTraduction = lodash.get(this.traductions || {}, 'buttons.signup', this.signupButtonTraduction);
-            this.buttonsBackgroundColor = lodash.get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
-            this.buttonsColor = lodash.get(this.styles || {}, 'buttonsColor', this.buttonsColor);
+            this.usernamePlaceholder = get(this.traductions || {}, 'form.usernamePlaceholder', this.usernamePlaceholder);
+            this.passwordPlaceholder = get(this.traductions || {}, 'form.passwordPlaceholder', this.passwordPlaceholder);
+            this.firstNamePlaceholder = get(this.traductions || {}, 'form.firstNamePlaceholder', this.firstNamePlaceholder);
+            this.lastNamePlaceholder = get(this.traductions || {}, 'form.lastNamePlaceholder', this.lastNamePlaceholder);
+            this.emailPlaceholder = get(this.traductions || {}, 'form.emailPlaceholder', this.emailPlaceholder);
+            this.enterprisePlaceholder = get(this.traductions || {}, 'form.enterprisePlaceholder', this.enterprisePlaceholder);
+            this.signUpDialogTitle = get(this.traductions || {}, 'dialogs.signup', this.signUpDialogTitle);
+            this.signupButtonTraduction = get(this.traductions || {}, 'buttons.signup', this.signupButtonTraduction);
+            this.buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
+            this.buttonsColor = get(this.styles || {}, 'buttonsColor', this.buttonsColor);
             this.userForm = this.formBuilder.group({
                 username: ['', forms.Validators.required],
                 password: ['', forms.Validators.required],
@@ -676,6 +681,7 @@
     var initialState = {
         isAuthenticated: false,
         isSignUpLoading: false,
+        isLoginLoading: false,
         user: null,
         error: null,
         isPasswordBeingChanged: false,
@@ -690,10 +696,12 @@
                 return __assign(__assign({}, state), { error: action.payload, isSignUpLoading: false });
             case exports.AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS:
                 return __assign(__assign({}, state), { error: null, isSignUpLoading: false });
+            case exports.AUTH_ACTIONS_TYPE.LOG_IN:
+                return __assign(__assign({}, state), { error: null, isLoginLoading: true });
             case exports.AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS:
-                return __assign(__assign({}, state), { isAuthenticated: true, user: action.payload.user, error: null, usersList: action.payload.usersList });
+                return __assign(__assign({}, state), { isAuthenticated: true, user: action.payload.user, error: null, usersList: action.payload.usersList, isLoginLoading: false });
             case exports.AUTH_ACTIONS_TYPE.LOG_IN_FAILURE:
-                return __assign(__assign({}, state), { error: action.payload });
+                return __assign(__assign({}, state), { error: action.payload, isLoginLoading: false });
             case exports.AUTH_ACTIONS_TYPE.LOG_OUT:
                 return initialState;
             case exports.AUTH_ACTIONS_TYPE.LOAD_USER_INFORMATION_SUCCESS:
@@ -729,9 +737,9 @@
             this.OpenSignUpDialog$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.OPEN_SIGN_UP_DIALOG), operators.tap(function () { return _this.dialogRef = _this.dialog.open(SignUpComponent); }));
             this.SignUp$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SIGN_UP), operators.map(function (action) { return action.payload; }), operators.switchMap(function (user) { return _this.authService.createUser(user).pipe(operators.map(function () { return new SignUpSuccess(); }), operators.catchError(function (error) { return rxjs.of(new SignUpFailure(error)); })); }));
             this.SignUpSuccess$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS), operators.tap(function () {
-                _this.toastService.success(lodash.get(_this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!'));
+                _this.toastService.success(get(_this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!'));
             }));
-            this.SignUpFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE), operators.tap(function (error) { return _this.toastService.error(lodash.get(_this.traductions || {}, 'messages.signupFailure', 'Please try again with a new username.')); }));
+            this.SignUpFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE), operators.tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.signupFailure', 'Please try again with a new username.')); }));
             this.LogIn$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN), operators.filter(function (action) { return common.isPlatformBrowser(_this.platformId); }), operators.map(function (action) { return action.payload; }), operators.switchMap(function (user) { return _this.authService.login(user).pipe(operators.concatMap(function (loggedInUser) {
                 sessionStorage.setItem('token', loggedInUser.token.token);
                 return _this.authService.getUserInformation().pipe(operators.map(function (_a) {
@@ -749,9 +757,9 @@
                 else {
                     _this.router.navigateByUrl(user.redirectUrlAfterLogin);
                 }
-                _this.toastService.success(lodash.get(_this.traductions || {}, 'messages.loginSuccess', 'Hi! Nice to see you again!'));
+                _this.toastService.success(get(_this.traductions || {}, 'messages.loginSuccess', 'Hi! Nice to see you again!'));
             }));
-            this.LogInFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN_FAILURE), operators.tap(function (error) { return _this.toastService.error(lodash.get(_this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')); }));
+            this.LogInFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_IN_FAILURE), operators.tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')); }));
             this.LogOut$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.LOG_OUT), operators.filter(function (action) { return common.isPlatformBrowser(_this.platformId); }), operators.switchMap(function (action) {
                 sessionStorage.removeItem('token');
                 _this.router.navigate(['log-in']);
@@ -762,14 +770,14 @@
                 return new LoadUserInformationSuccess(user);
             }), operators.catchError(function (error) { return rxjs.of(new LoadUserInformationFailure(error)); })); }));
             this.ChangePassword$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD), operators.switchMap(function (action) { return _this.authService.changePassword(action.payload).pipe(operators.map(function () { return new ChangePasswordSuccess(); }), operators.catchError(function (error) { return rxjs.of(new ChangePasswordFailure(error)); })); }));
-            this.ChangePasswordSuccess$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_SUCCESS), operators.tap(function () { return _this.toastService.success(lodash.get(_this.traductions || {}, 'messages.changePasswordSuccess', 'Your password has been successfully changed!')); }));
-            this.ChangePasswordFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_FAILURE), operators.tap(function (error) { return _this.toastService.error(lodash.get(_this.traductions || {}, 'messages.changePasswordFailure', 'Wrong current password. Please try again.')); }));
+            this.ChangePasswordSuccess$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_SUCCESS), operators.tap(function () { return _this.toastService.success(get(_this.traductions || {}, 'messages.changePasswordSuccess', 'Your password has been successfully changed!')); }));
+            this.ChangePasswordFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_FAILURE), operators.tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.changePasswordFailure', 'Wrong current password. Please try again.')); }));
             this.OpenForgottenPasswordDialog$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.OPEN_FORGOTTEN_PASSWORD_DIALOG), operators.tap(function () { return _this.dialogRef = _this.dialog.open(ForgottenPasswordComponent); }));
             this.SendPassword$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD), operators.tap(function () {
                 _this.dialogRef.close();
             }), operators.switchMap(function (action) { return _this.authService.sendPassword(action.payload).pipe(operators.map(function () { return new SendPasswordSuccess(); }), operators.catchError(function (error) { return rxjs.of(new SendPasswordFailure(error)); })); }));
-            this.SendPasswordSuccess$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD_SUCCESS), operators.tap(function () { return _this.toastService.success(lodash.get(_this.traductions || {}, 'messages.passwordResetSuccess', 'An email for resetting your password has been sent to your address.')); }));
-            this.SendPasswordFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE), operators.tap(function () { return _this.toastService.error(lodash.get(_this.traductions || {}, 'messages.passwordResetFailure', 'An error occured. Please try again.')); }));
+            this.SendPasswordSuccess$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD_SUCCESS), operators.tap(function () { return _this.toastService.success(get(_this.traductions || {}, 'messages.passwordResetSuccess', 'An email for resetting your password has been sent to your address.')); }));
+            this.SendPasswordFailure$ = this.actions.pipe(effects.ofType(exports.AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE), operators.tap(function () { return _this.toastService.error(get(_this.traductions || {}, 'messages.passwordResetFailure', 'An error occured. Please try again.')); }));
         }
         AuthEffects.ctorParameters = function () { return [
             { type: Array, decorators: [{ type: core.Inject, args: [AUTH_RESET_ACTIONS,] }] },
@@ -922,6 +930,7 @@
     exports.initialState = initialState;
     exports.selectAuthState = selectAuthState;
     exports.selectIsAuthenticated = selectIsAuthenticated;
+    exports.selectIsLoginLoading = selectIsLoginLoading;
     exports.selectIsPasswordBeingChanged = selectIsPasswordBeingChanged;
     exports.selectIsSignUpLoading = selectIsSignUpLoading;
     exports.selectLogInError = selectLogInError;
@@ -933,6 +942,7 @@
     exports.ɵ3 = ɵ3;
     exports.ɵ4 = ɵ4;
     exports.ɵ5 = ɵ5;
+    exports.ɵ6 = ɵ6;
     exports.ɵa = AuthEffects;
 
     Object.defineProperty(exports, '__esModule', { value: true });

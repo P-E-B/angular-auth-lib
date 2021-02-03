@@ -6,7 +6,7 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { createFeatureSelector, createSelector, select, Store, StoreModule } from '@ngrx/store';
 import { Validators, FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { get } from 'lodash';
+import get from 'lodash-es/get';
 import { MatDialogRef, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
@@ -93,6 +93,8 @@ const ɵ4 = (state) => state.usersList;
 const selectUsersList = createSelector(selectAuthState, ɵ4); // list of colleagues of the current user for example
 const ɵ5 = (state) => state.isSignUpLoading;
 const selectIsSignUpLoading = createSelector(selectAuthState, ɵ5);
+const ɵ6 = (state) => state.isLoginLoading;
+const selectIsLoginLoading = createSelector(selectAuthState, ɵ6);
 
 let AuthGuard = class AuthGuard {
     constructor(store, router, platformId) {
@@ -289,6 +291,7 @@ let LogInComponent = class LogInComponent {
         this.formBuilder = formBuilder;
         this.store = store;
         this.isPasswordBeingChanged$ = this.store.pipe(select(selectIsPasswordBeingChanged));
+        this.isLoginLoading$ = this.store.pipe(select(selectIsLoginLoading));
         this.usernamePlaceholder = 'Username';
         this.passwordPlaceholder = 'Password';
         this.forgottenPassword = 'Forgot your password?';
@@ -329,7 +332,7 @@ LogInComponent.ctorParameters = () => [
 LogInComponent = __decorate([
     Component({
         selector: 'auth-lib-log-in',
-        template: "<div id=\"container\" [ngStyle]=\"{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}\">\n  <mat-card class=\"mat-elevation-z8\">\n    <img *ngIf=\"images.logoImageUrl && images.logoImageUrl.length >= 1\" [src]=\"images.logoImageUrl\">\n    <form [formGroup]=\"userForm\" (ngSubmit)=\"onSubmit()\">\n\n      <mat-form-field>\n        <input matInput [placeholder]=\"usernamePlaceholder\" formControlName=\"username\">\n      </mat-form-field>\n\n      <mat-form-field>\n          <input matInput type=\"password\" [placeholder]=\"passwordPlaceholder\" formControlName=\"password\">\n      </mat-form-field>\n\n      <button \n        mat-raised-button\n        type=\"submit\" \n        [disabled]=\"userForm.invalid\"\n        *ngIf=\"!(isPasswordBeingChanged$ | async)\"\n        [ngStyle]=\"{\n          'background-color': buttonsBackgroundColor,\n          'color': buttonsColor\n        }\"\n      >\n        {{ loginButtonTraduction }}\n      </button>\n      <mat-spinner *ngIf=\"isPasswordBeingChanged$ | async\" [diameter]=\"36\"></mat-spinner>\n\n      <a (click)=\"openDialog()\">{{ forgottenPassword }}</a>\n    </form>\n  </mat-card>\n</div>\n",
+        template: "<div id=\"container\" [ngStyle]=\"{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}\">\n  <mat-card class=\"mat-elevation-z8\">\n    <img *ngIf=\"images.logoImageUrl && images.logoImageUrl.length >= 1\" [src]=\"images.logoImageUrl\">\n    <form [formGroup]=\"userForm\" (ngSubmit)=\"onSubmit()\">\n\n      <mat-form-field>\n        <input matInput [placeholder]=\"usernamePlaceholder\" formControlName=\"username\">\n      </mat-form-field>\n\n      <mat-form-field>\n          <input matInput type=\"password\" [placeholder]=\"passwordPlaceholder\" formControlName=\"password\">\n      </mat-form-field>\n\n      <button \n        mat-raised-button\n        type=\"submit\" \n        [disabled]=\"userForm.invalid\"\n        *ngIf=\"!(isPasswordBeingChanged$ | async) && !(isLoginLoading$ | async)\"\n        [ngStyle]=\"{\n          'background-color': buttonsBackgroundColor,\n          'color': buttonsColor\n        }\"\n      >\n        {{ loginButtonTraduction }}\n      </button>\n      <mat-spinner *ngIf=\"(isPasswordBeingChanged$ | async) || (isLoginLoading$ | async)\" [diameter]=\"36\"></mat-spinner>\n\n      <a (click)=\"openDialog()\">{{ forgottenPassword }}</a>\n    </form>\n  </mat-card>\n</div>\n",
         styles: ["#container{display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;width:100%;flex:1;background-size:cover}#container mat-card{display:flex;flex-direction:column;justify-content:center;align-items:center;height:400px;width:400px;box-sizing:border-box;padding:2%}#container mat-card img{display:block;max-width:200px;max-height:100px;width:auto;height:auto;margin-bottom:20px}#container mat-card form{display:flex;flex:1;flex-direction:column;justify-content:center;align-items:center;width:100%}#container mat-card form mat-form-field{width:75%;font-size:16px}#container mat-card form a,#container mat-card form button,#container mat-card form mat-spinner{margin-top:20px}#container mat-card form a{cursor:pointer;color:#1e90ff;font-size:16px}"]
     }),
     __param(0, Inject(AUTH_IMAGES_URLS)),
@@ -446,6 +449,7 @@ SignUpComponent = __decorate([
 const initialState = {
     isAuthenticated: false,
     isSignUpLoading: false,
+    isLoginLoading: false,
     user: null,
     error: null,
     isPasswordBeingChanged: false,
@@ -459,10 +463,12 @@ function authReducer(state = initialState, action) {
             return Object.assign(Object.assign({}, state), { error: action.payload, isSignUpLoading: false });
         case AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS:
             return Object.assign(Object.assign({}, state), { error: null, isSignUpLoading: false });
+        case AUTH_ACTIONS_TYPE.LOG_IN:
+            return Object.assign(Object.assign({}, state), { error: null, isLoginLoading: true });
         case AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS:
-            return Object.assign(Object.assign({}, state), { isAuthenticated: true, user: action.payload.user, error: null, usersList: action.payload.usersList });
+            return Object.assign(Object.assign({}, state), { isAuthenticated: true, user: action.payload.user, error: null, usersList: action.payload.usersList, isLoginLoading: false });
         case AUTH_ACTIONS_TYPE.LOG_IN_FAILURE:
-            return Object.assign(Object.assign({}, state), { error: action.payload });
+            return Object.assign(Object.assign({}, state), { error: action.payload, isLoginLoading: false });
         case AUTH_ACTIONS_TYPE.LOG_OUT:
             return initialState;
         case AUTH_ACTIONS_TYPE.LOAD_USER_INFORMATION_SUCCESS:
@@ -651,5 +657,5 @@ AuthModule = AuthModule_1 = __decorate([
  * Generated bundle index. Do not edit.
  */
 
-export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, UpdateUser, authReducer, initialState, selectAuthState, selectIsAuthenticated, selectIsPasswordBeingChanged, selectIsSignUpLoading, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, ɵ5, AuthEffects as ɵa };
+export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, UpdateUser, authReducer, initialState, selectAuthState, selectIsAuthenticated, selectIsLoginLoading, selectIsPasswordBeingChanged, selectIsSignUpLoading, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, ɵ5, ɵ6, AuthEffects as ɵa };
 //# sourceMappingURL=angular-auth-lib.js.map

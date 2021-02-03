@@ -4,6 +4,7 @@ import { User } from '../models/user.models';
 export interface AuthState {
     isAuthenticated: boolean;
     isSignUpLoading: boolean;
+    isLoginLoading: boolean;
     user: User;
     error: HttpErrorResponse;
     isPasswordBeingChanged: boolean;

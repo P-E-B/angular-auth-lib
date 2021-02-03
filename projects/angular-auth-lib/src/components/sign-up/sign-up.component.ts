@@ -3,7 +3,7 @@ import { MatDialogRef } from '@angular/material/dialog';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
 
-import { get } from 'lodash';
+import get from 'lodash-es/get';
 
 import { AuthState } from '../../store/reducer';
 import { User } from '../../models/user.models';
