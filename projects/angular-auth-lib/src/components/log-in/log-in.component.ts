@@ -2,7 +2,7 @@ import { Component, OnInit, Inject } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Store, select } from '@ngrx/store';
 
-import get from 'lodash-es/get';
+import { get } from '../../utils';
 
 import { User } from '../../models/user.models';
 import { AuthState } from '../../store/reducer';

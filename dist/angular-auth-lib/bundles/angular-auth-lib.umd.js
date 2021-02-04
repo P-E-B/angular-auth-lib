@@ -1,10 +1,8 @@
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/common/http'), require('rxjs/operators'), require('@angular/common'), require('@angular/router'), require('@ngrx/store'), require('@angular/forms'), require('lodash-es/get'), require('@angular/material/dialog'), require('@angular/material/input'), require('@angular/material/card'), require('@angular/material/button'), require('@angular/material/progress-spinner'), require('@angular/platform-browser/animations'), require('@ngrx/effects'), require('ngx-toastr'), require('rxjs')) :
-    typeof define === 'function' && define.amd ? define('angular-auth-lib', ['exports', '@angular/core', '@angular/common/http', 'rxjs/operators', '@angular/common', '@angular/router', '@ngrx/store', '@angular/forms', 'lodash-es/get', '@angular/material/dialog', '@angular/material/input', '@angular/material/card', '@angular/material/button', '@angular/material/progress-spinner', '@angular/platform-browser/animations', '@ngrx/effects', 'ngx-toastr', 'rxjs'], factory) :
-    (global = global || self, factory(global['angular-auth-lib'] = {}, global.ng.core, global.ng.common.http, global.rxjs.operators, global.ng.common, global.ng.router, global['@ngrx/store'], global.ng.forms, global.get, global.ng.material.dialog, global.ng.material.input, global.ng.material.card, global.ng.material.button, global.ng.material.progressSpinner, global.ng.platformBrowser.animations, global['@ngrx/effects'], global['ngx-toastr'], global.rxjs));
-}(this, (function (exports, core, http, operators, common, router, store, forms, get, dialog, input, card, button, progressSpinner, animations, effects, ngxToastr, rxjs) { 'use strict';
-
-    get = get && Object.prototype.hasOwnProperty.call(get, 'default') ? get['default'] : get;
+    typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('@angular/core'), require('@angular/common/http'), require('rxjs/operators'), require('@angular/common'), require('@angular/router'), require('@ngrx/store'), require('@angular/forms'), require('@angular/material/dialog'), require('@angular/material/input'), require('@angular/material/card'), require('@angular/material/button'), require('@angular/material/progress-spinner'), require('@angular/platform-browser/animations'), require('@ngrx/effects'), require('ngx-toastr'), require('rxjs')) :
+    typeof define === 'function' && define.amd ? define('angular-auth-lib', ['exports', '@angular/core', '@angular/common/http', 'rxjs/operators', '@angular/common', '@angular/router', '@ngrx/store', '@angular/forms', '@angular/material/dialog', '@angular/material/input', '@angular/material/card', '@angular/material/button', '@angular/material/progress-spinner', '@angular/platform-browser/animations', '@ngrx/effects', 'ngx-toastr', 'rxjs'], factory) :
+    (global = global || self, factory(global['angular-auth-lib'] = {}, global.ng.core, global.ng.common.http, global.rxjs.operators, global.ng.common, global.ng.router, global['@ngrx/store'], global.ng.forms, global.ng.material.dialog, global.ng.material.input, global.ng.material.card, global.ng.material.button, global.ng.material.progressSpinner, global.ng.platformBrowser.animations, global['@ngrx/effects'], global['ngx-toastr'], global.rxjs));
+}(this, (function (exports, core, http, operators, common, router, store, forms, dialog, input, card, button, progressSpinner, animations, effects, ngxToastr, rxjs) { 'use strict';
 
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation. All rights reserved.
@@ -362,6 +360,33 @@
         ], TokenInterceptor);
         return TokenInterceptor;
     }());
+
+    function get(object, path, defaultValue) {
+        var e_1, _a;
+        if (defaultValue === void 0) { defaultValue = null; }
+        var nestedKeys = path.split('.');
+        var currentPathValue = object;
+        try {
+            for (var nestedKeys_1 = __values(nestedKeys), nestedKeys_1_1 = nestedKeys_1.next(); !nestedKeys_1_1.done; nestedKeys_1_1 = nestedKeys_1.next()) {
+                var key = nestedKeys_1_1.value;
+                currentPathValue = currentPathValue[key] || null;
+                if (typeof currentPathValue !== 'object' && currentPathValue !== null) {
+                    return currentPathValue;
+                }
+                else if (currentPathValue === null) {
+                    return defaultValue || null;
+                }
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (nestedKeys_1_1 && !nestedKeys_1_1.done && (_a = nestedKeys_1.return)) _a.call(nestedKeys_1);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
+        return defaultValue || null;
+    }
 
 
     (function (AUTH_ACTIONS_TYPE) {

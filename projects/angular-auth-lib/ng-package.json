@@ -6,8 +6,7 @@
     "umdModuleIds": {
       "@ngrx/store": "@ngrx/store",
       "@ngrx/effects": "@ngrx/effects",
-      "ngx-toastr": "ngx-toastr",
-      "lodash-es": "lodash-es"
+      "ngx-toastr": "ngx-toastr"
     }
   }
 }

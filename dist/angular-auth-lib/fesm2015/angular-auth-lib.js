@@ -6,7 +6,6 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { createFeatureSelector, createSelector, select, Store, StoreModule } from '@ngrx/store';
 import { Validators, FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import get from 'lodash-es/get';
 import { MatDialogRef, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
@@ -152,6 +151,21 @@ TokenInterceptor.ctorParameters = () => [
 TokenInterceptor = __decorate([
     Injectable()
 ], TokenInterceptor);
+
+function get(object, path, defaultValue = null) {
+    const nestedKeys = path.split('.');
+    let currentPathValue = object;
+    for (let key of nestedKeys) {
+        currentPathValue = currentPathValue[key] || null;
+        if (typeof currentPathValue !== 'object' && currentPathValue !== null) {
+            return currentPathValue;
+        }
+        else if (currentPathValue === null) {
+            return defaultValue || null;
+        }
+    }
+    return defaultValue || null;
+}
 
 var AUTH_ACTIONS_TYPE;
 (function (AUTH_ACTIONS_TYPE) {

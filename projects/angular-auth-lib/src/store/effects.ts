@@ -8,7 +8,7 @@ import { Store, select } from '@ngrx/store';
 import { MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { map, switchMap, catchError, tap, withLatestFrom, concatMap, filter } from 'rxjs/operators';
 
-import get from 'lodash-es/get';
+import { get } from '../utils';
 
 import {
   AUTH_ACTIONS_TYPE,

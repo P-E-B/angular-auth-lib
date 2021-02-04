@@ -24,6 +24,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.15**: Removing lodash-es
 * **0.0.14**: Removing lodash and putting instead lodash-es for tree shaking
 * **0.0.13**: Adding isLoading selector
 * **0.0.12**: Adding UpdateUser action to manage user in real time

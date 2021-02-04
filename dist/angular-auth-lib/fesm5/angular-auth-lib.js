@@ -1,4 +1,4 @@
-import { __assign, __decorate, __param, __read } from 'tslib';
+import { __assign, __decorate, __param, __read, __values } from 'tslib';
 import { InjectionToken, Inject, PLATFORM_ID, ɵɵdefineInjectable, ɵɵinject, Injectable, Component, ViewChild, NgModule } from '@angular/core';
 import { HttpClient, HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { map, withLatestFrom, tap, switchMap, catchError, filter, concatMap } from 'rxjs/operators';
@@ -6,7 +6,6 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { createFeatureSelector, createSelector, select, Store, StoreModule } from '@ngrx/store';
 import { Validators, FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import get from 'lodash-es/get';
 import { MatDialogRef, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
@@ -159,6 +158,33 @@ var TokenInterceptor = /** @class */ (function () {
     ], TokenInterceptor);
     return TokenInterceptor;
 }());
+
+function get(object, path, defaultValue) {
+    var e_1, _a;
+    if (defaultValue === void 0) { defaultValue = null; }
+    var nestedKeys = path.split('.');
+    var currentPathValue = object;
+    try {
+        for (var nestedKeys_1 = __values(nestedKeys), nestedKeys_1_1 = nestedKeys_1.next(); !nestedKeys_1_1.done; nestedKeys_1_1 = nestedKeys_1.next()) {
+            var key = nestedKeys_1_1.value;
+            currentPathValue = currentPathValue[key] || null;
+            if (typeof currentPathValue !== 'object' && currentPathValue !== null) {
+                return currentPathValue;
+            }
+            else if (currentPathValue === null) {
+                return defaultValue || null;
+            }
+        }
+    }
+    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+    finally {
+        try {
+            if (nestedKeys_1_1 && !nestedKeys_1_1.done && (_a = nestedKeys_1.return)) _a.call(nestedKeys_1);
+        }
+        finally { if (e_1) throw e_1.error; }
+    }
+    return defaultValue || null;
+}
 
 var AUTH_ACTIONS_TYPE;
 (function (AUTH_ACTIONS_TYPE) {
