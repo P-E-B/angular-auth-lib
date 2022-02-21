@@ -21,6 +21,7 @@ import { TokenInterceptor } from './services/token.interceptor';
 import { AuthGuard } from './services/auth-guard.service';
 import { LogInComponent } from './components/log-in/log-in.component';
 import { ForgottenPasswordComponent } from './components/forgotten-password/forgotten-password.component';
+import { ActivateUserComponent } from './components/activate-user/activate-user.component';
 import { SignUpComponent } from './components/sign-up/sign-up.component';
 
 import {
@@ -34,7 +35,7 @@ import {
 
 
 @NgModule({
-  declarations: [LogInComponent, ForgottenPasswordComponent, SignUpComponent],
+  declarations: [LogInComponent, ForgottenPasswordComponent, SignUpComponent, ActivateUserComponent],
   imports: [
     CommonModule,
     HttpClientModule,
@@ -55,7 +56,7 @@ import {
     })
   ],
   entryComponents: [ForgottenPasswordComponent],
-  exports: [LogInComponent, ForgottenPasswordComponent],
+  exports: [LogInComponent, ForgottenPasswordComponent, SignUpComponent, ActivateUserComponent],
   providers: [AuthGuard]
 })
 export class AuthModule {

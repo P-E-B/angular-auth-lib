@@ -7,6 +7,7 @@ export interface AuthModuleConfig {
         refreshTokenUrl?: string;
         changePasswordUrl?: string;
         signUpUrl?: string;
+        sendActivationCodeUrl?: string;
     };
     images: {
         loginBackgroundImageUrl: string;
@@ -21,6 +22,7 @@ export interface AuthModuleConfig {
             send?: string;
             passwordForgotten?: string;
             signup?: string;
+            sendActivationCode?: string;
         };
         form?: {
             usernamePlaceholder?: string;
@@ -29,12 +31,15 @@ export interface AuthModuleConfig {
             firstNamePlaceholder?: string;
             lastNamePlaceholder?: string;
             enterprisePlaceholder?: string;
+            activationCodePlaceholder?: string;
         };
         messages?: {
             loginSuccess?: string;
             loginFailure?: string;
             signupSuccess?: string;
             signupFailure?: string;
+            sendActivationCodeSuccess?: string;
+            sendActivationCodeFailure?: string;
             passwordResetSuccess?: string;
             passwordResetFailure?: string;
             changePasswordSuccess?: string;
@@ -54,6 +59,7 @@ export declare const AUTH_API_URLS: InjectionToken<{
     refreshTokenUrl?: string;
     changePasswordUrl?: string;
     signUpUrl?: string;
+    sendActivationCodeUrl?: string;
 }>;
 export declare const AUTH_IMAGES_URLS: InjectionToken<{
     loginBackgroundImageUrl: string;
@@ -68,6 +74,7 @@ export declare const AUTH_TRADUCTIONS: InjectionToken<{
         send?: string;
         passwordForgotten?: string;
         signup?: string;
+        sendActivationCode?: string;
     };
     form?: {
         usernamePlaceholder?: string;
@@ -76,12 +83,15 @@ export declare const AUTH_TRADUCTIONS: InjectionToken<{
         firstNamePlaceholder?: string;
         lastNamePlaceholder?: string;
         enterprisePlaceholder?: string;
+        activationCodePlaceholder?: string;
     };
     messages?: {
         loginSuccess?: string;
         loginFailure?: string;
         signupSuccess?: string;
         signupFailure?: string;
+        sendActivationCodeSuccess?: string;
+        sendActivationCodeFailure?: string;
         passwordResetSuccess?: string;
         passwordResetFailure?: string;
         changePasswordSuccess?: string;

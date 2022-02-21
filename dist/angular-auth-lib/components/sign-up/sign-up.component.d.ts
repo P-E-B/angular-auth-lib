@@ -10,6 +10,7 @@ export declare class SignUpComponent implements OnInit {
     dialogRef: MatDialogRef<SignUpComponent>;
     private formBuilder;
     private store;
+    isSignUpLoading$: import("rxjs").Observable<boolean>;
     userForm: FormGroup;
     usernamePlaceholder: string;
     passwordPlaceholder: string;
@@ -23,5 +24,5 @@ export declare class SignUpComponent implements OnInit {
     buttonsColor: string;
     constructor(traductions: AuthModuleConfig['traductions'], styles: AuthModuleConfig['styles'], dialogRef: MatDialogRef<SignUpComponent>, formBuilder: FormBuilder, store: Store<AuthState>);
     ngOnInit(): void;
-    onSubmit(): void;
+    onSubmitUser(): void;
 }

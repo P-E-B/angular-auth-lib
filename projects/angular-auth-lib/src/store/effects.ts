@@ -27,7 +27,11 @@ import {
   LoadUserInformation,
   SendPassword,
   SendPasswordSuccess,
-  SendPasswordFailure
+  SendPasswordFailure,
+  SendActivationCode,
+  SendActivationCodeSuccess,
+  SendActivationCodeFailure,
+  ResetAuthState
 } from './actions';
 import { selectUser } from './selectors';
 import { User } from '../models/user.models';
@@ -77,15 +81,49 @@ export class AuthEffects {
     tap(() => {
       this.toastService.success(
         get(this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!')
-      )
+      );
+      if (this.dialogRef) {
+        this.dialogRef.close();
+      }
     })
   );
 
   @Effect({ dispatch: false })
   SignUpFailure$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE),
+    map((action: SignUpFailure) => action.payload),
     tap((error: HttpErrorResponse) => this.toastService.error(
-      get(this.traductions || {}, 'messages.signupFailure', 'Please try again with a new username.')
+      get(this.traductions || {}, 'messages.signupFailure', 'Please try again.')
+    ))
+  );
+
+  @Effect()
+  SendActivationCode$ = this.actions.pipe(
+    ofType(AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE),
+    map((action: SendActivationCode) => action.payload),
+    switchMap((activationCode: string) => this.authService.sendActivationCode(activationCode).pipe(
+      map(() => new SendActivationCodeSuccess()),
+      catchError((error: HttpErrorResponse) => of(new SendActivationCodeFailure(error)))
+    ))
+  );
+
+  @Effect()
+  SendActivationCodeSuccess$ = this.actions.pipe(
+    ofType(AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS),
+    tap(() => {
+      this.toastService.success(
+        get(this.traductions || {}, 'messages.sendActivationCodeSuccess', 'Your account has been verified!')
+      );
+      this.router.navigate(['log-in']);
+    }),
+    map(() => new ResetAuthState())
+  );
+
+  @Effect({ dispatch: false })
+  SendActivationCodeFailure$ = this.actions.pipe(
+    ofType(AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE),
+    tap((error: SendActivationCodeFailure) => this.toastService.error(
+      get(this.traductions || {}, 'messages.sendActivationCodeFailure', 'Please try again with the correct code.')
     ))
   );
 
@@ -98,7 +136,7 @@ export class AuthEffects {
       concatMap((loggedInUser: User) => {
         sessionStorage.setItem('token', loggedInUser.token.token);
         return this.authService.getUserInformation().pipe(
-          map(({user, usersList}) => new LogInSuccess({ user, usersList })),
+          map(({ user, usersList }) => new LogInSuccess({ user, usersList })),
           catchError((error: HttpErrorResponse) => of(new LogInFailure(error)))
         );
       }),
@@ -114,7 +152,7 @@ export class AuthEffects {
     tap(([action, user]: [LogInSuccess, User]) => {
       const redirectedUrlAfterLogIn = sessionStorage.getItem('redirectedUrlAfterLogIn');
       if (redirectedUrlAfterLogIn && isPlatformBrowser(this.platformId)) {
-        this.router.navigateByUrl(redirectedUrlAfterLogIn)
+        this.router.navigateByUrl(redirectedUrlAfterLogIn);
         sessionStorage.removeItem('redirectedUrlAfterLogIn');
       } else {
         this.router.navigateByUrl(user.redirectUrlAfterLogin);
@@ -128,7 +166,7 @@ export class AuthEffects {
   @Effect({ dispatch: false })
   LogInFailure$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.LOG_IN_FAILURE),
-    tap((error: HttpErrorResponse) => this.toastService.error(
+    tap((error: LogInFailure) => this.toastService.error(
       get(this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')
     ))
   );
@@ -148,7 +186,7 @@ export class AuthEffects {
   LoadUserInformation$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.LOAD_USER_INFORMATION),
     switchMap((action: LoadUserInformation) => this.authService.getUserInformation().pipe(
-      map(({user, usersList}) => new LoadUserInformationSuccess(user)),
+      map(({ user, usersList }) => new LoadUserInformationSuccess(user)),
       catchError((error: HttpErrorResponse) => of(new LoadUserInformationFailure(error)))
     ))
   );
@@ -173,7 +211,7 @@ export class AuthEffects {
   @Effect({ dispatch: false })
   ChangePasswordFailure$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_FAILURE),
-    tap((error: HttpErrorResponse) => this.toastService.error(
+    tap((error: ChangePasswordFailure) => this.toastService.error(
       get(this.traductions || {}, 'messages.changePasswordFailure', 'Wrong current password. Please try again.')
     ))
   );

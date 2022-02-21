@@ -8,6 +8,7 @@ export * from './services/token.interceptor';
 export * from './components/log-in/log-in.component';
 export * from './components/forgotten-password/forgotten-password.component';
 export * from './components/sign-up/sign-up.component';
+export * from './components/activate-user/activate-user.component';
 export * from './store/actions';
 export * from './store/reducer';
 export * from './store/selectors';

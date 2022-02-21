@@ -33,6 +33,21 @@ export const selectIsSignUpLoading = createSelector(
     (state: AuthState) => state.isSignUpLoading
 );
 
+export const selectIsSendActivationCodeLoading = createSelector(
+    selectAuthState,
+    (state: AuthState) => state.isSendActivationCodeLoading
+);
+
+export const selectIsActivated = createSelector(
+    selectAuthState,
+    (state: AuthState) => state.isUserActivated
+);
+
+export const selectIsUserCreated = createSelector(
+    selectAuthState,
+    (state: AuthState) => state.isUserCreated
+);
+
 export const selectIsLoginLoading = createSelector(
     selectAuthState,
     (state: AuthState) => state.isLoginLoading

@@ -9,10 +9,12 @@ It contains:
 * a token interceptor
 * a basic user model you can extend in your application
 * a store powered by NgRx (actions, reducer, effects and selectors)
-* three components: 
+* four components: 
   1. `LogInComponent` which allows users to login
   2. `ForgottenPasswordComponent` which allows users to get new passwords
-  3. `SignUpComponent` which allows users to create an account with basic fields (username, password, first name, last name, email, enterprise). The field enterprise is not required. Please note that `SignUpComponent` is implemented as a dialog. So user just has to click on a button dispatching the action `OpenSignUpDialog` to access the signup form.
+  3. `SignUpComponent` which allows users to create an account with basic fields (username, password, first name, last name, email, enterprise). The field enterprise is not required. Please note that `SignUpComponent` is implemented as a dialog. So user just has to click on a button dispatching the action `OpenSignUpDialog` to access the signup form. 
+  You are free to code your own `SignUpComponent` without going with a dialog.
+  4. `ActivateUserComponent` which allows users to activate their account: they click on a link you generated in the signup email to activate / validate their account
 
 P.S.: Refresh token feature is not yet implemented. In the meantime, increase the duration of the access token life.
 
@@ -24,6 +26,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.16**: Adding support for activation code to better control sign-ups
 * **0.0.15**: Removing lodash-es
 * **0.0.14**: Removing lodash and putting instead lodash-es for tree shaking
 * **0.0.13**: Adding isLoading selector
@@ -86,7 +89,8 @@ Here is an example of a user who can access `'home'` and will be redirected to i
 	"firstName" : "Paul-Emile",
 	"lastName" : "Brotons",
 	"passwordHash" : "azerty",
-  "redirectUrlAfterLogin" : "home"
+  "redirectUrlAfterLogin" : "home",
+  "isActivated" : true
 }
 ```
 
@@ -173,6 +177,7 @@ export interface AuthModuleConfig {
       refreshTokenUrl?: string;
       changePasswordUrl?: string;  // the back-end url to change password (it will require a UserPageComponent)
       signUpUrl?: string;  // the back-end url to sign up for a new user
+      sendActivationCodeUrl?: string; // the back-end url to activate a user
     };
     images: {
       loginBackgroundImageUrl: string;
@@ -187,6 +192,7 @@ export interface AuthModuleConfig {
         send?: string; // defaults to 'Send'
         passwordForgotten?: string; // defaults to 'Forgot your password?'
         signup?: string; // defaults to 'Send'
+        sendActivationCode?: string; // defaults to 'Send'
       }
       form?: {
         usernamePlaceholder?: string; // defaults to 'Username'
@@ -195,12 +201,15 @@ export interface AuthModuleConfig {
         firstNamePlaceholder?: string; // defaults to 'First name'
         lastNamePlaceholder?: string; // defaults to 'Last name'
         enterprisePlaceholder?: string; // defaults to 'Enterprise'
+        activationCodePlaceholder?: string; // defaults to 'Enter your activation code'
       },
       messages?: {
         loginSuccess?: string; // defaults to 'Hi! Nice to see you again!'
         loginFailure?: string; // defaults to 'Wrong credentials. Please check again.'
         signupSuccess?: string; // defaults to 'Your account has been created!'
-        signupFailure?: string; // defaults to 'Please try again with a new username.'
+        signupFailure?: string; // defaults to 'Please try again.'
+        sendActivationCodeSuccess?: string; // defaults to 'Your account has been verified!'
+        sendActivationCodeFailure?: string; // defaults to 'Please try again with the correct code.'
         passwordResetSuccess?: string; // defaults to 'An email for resetting your password has been sent to your address.'
         passwordResetFailure?: string; // defaults to 'An error occured. Please try again.'
         changePasswordSuccess?: string; // defaults to 'Your password has been successfully changed!'
@@ -232,6 +241,7 @@ export interface BaseUser {
     dateJoined: Date;
     redirectUrlAfterLogin: string;
     allowedUrls: string[];
+    isActivated: boolean;
     token?: Token;
     password?: string; // only when user sends its password to the backend for login. This should not be present afterwards.
 }

@@ -1,5 +1,5 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { User, Token } from '../models/user.models';
 import { map } from 'rxjs/operators';
 import { Observable } from 'rxjs';
@@ -68,6 +68,11 @@ export class AuthService {
 
   sendPassword(mail: string) {
     return this.http.post(this.apiUrls.sendBackPasswordUrl, { email: mail });
+  }
+
+  sendActivationCode(activationCode: string) {
+    const params = new HttpParams().append('activationCode', activationCode);
+    return this.http.get(this.apiUrls.sendActivationCodeUrl, { params });
   }
 
   createUser(user: User) {

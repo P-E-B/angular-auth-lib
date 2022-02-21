@@ -21,5 +21,6 @@ export declare class AuthService {
         nextPassword: string;
     }): Observable<Object>;
     sendPassword(mail: string): Observable<Object>;
+    sendActivationCode(activationCode: string): Observable<Object>;
     createUser(user: User): Observable<Object>;
 }

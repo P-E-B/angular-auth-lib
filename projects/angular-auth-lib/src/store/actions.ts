@@ -8,6 +8,10 @@ export enum AUTH_ACTIONS_TYPE {
     SIGN_UP_SUCCESS = '[Auth] Sign up success',
     SIGN_UP_FAILURE = '[Auth] Sign up failure',
 
+    SEND_ACTIVATION_CODE = '[Auth] User sends his activation code',
+    SEND_ACTIVATION_CODE_SUCCESS = '[Auth] Success while sending the activation',
+    SEND_ACTIVATION_CODE_FAILURE = '[Auth] Activation code failure',
+
     LOG_IN = '[Auth] User tries to log in',
     LOG_IN_SUCCESS = '[Auth] Log in success',
     LOG_IN_FAILURE = '[Auth] Log in failure',
@@ -27,7 +31,9 @@ export enum AUTH_ACTIONS_TYPE {
     SEND_PASSWORD_SUCCESS = '[Auth] User has received his password',
     SEND_PASSWORD_FAILURE = '[Auth] Error in the process of sending the password to the user',
 
-    UPDATE_USER = '[Auth] Update of user'
+    UPDATE_USER = '[Auth] Update of user',
+
+    RESET_AUTH_STATE = '[Auth] Reset Auth state'
 }
 
 export class OpenSignUpDialog implements Action {
@@ -45,6 +51,20 @@ export class SignUpSuccess implements Action {
 
 export class SignUpFailure implements Action {
     readonly type = AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE;
+    constructor(public payload: HttpErrorResponse) {}
+}
+
+export class SendActivationCode implements Action {
+    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE;
+    constructor(public payload: string) {}
+}
+
+export class SendActivationCodeSuccess implements Action {
+    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS;
+}
+
+export class SendActivationCodeFailure implements Action {
+    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE;
     constructor(public payload: HttpErrorResponse) {}
 }
 
@@ -121,10 +141,17 @@ export class UpdateUser implements Action {
     constructor(public payload: Partial<User>) {}
 }
 
+export class ResetAuthState implements Action {
+    readonly type = AUTH_ACTIONS_TYPE.RESET_AUTH_STATE;
+}
+
 export type Actions = OpenSignUpDialog
     | SignUp
     | SignUpSuccess
     | SignUpFailure
+    | SendActivationCode
+    | SendActivationCodeSuccess
+    | SendActivationCodeFailure
     | LogIn
     | LogInSuccess
     | LogInFailure
@@ -139,4 +166,5 @@ export type Actions = OpenSignUpDialog
     | SendPassword
     | SendPasswordSuccess
     | SendPasswordFailure
-    | UpdateUser;
+    | UpdateUser
+    | ResetAuthState;

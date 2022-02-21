@@ -15,7 +15,7 @@
     "pack_auth_lib": "cd dist/angular-auth-lib && npm pack",
     "package_auth_lib": "npm run build_auth_lib && npm run copy-files && npm run pack_auth_lib",
     "package_auth_lib_prod": "npm run build_auth_lib --prod && npm run copy-files && npm run pack_auth_lib",
-    "publish_auth_lib_prod": "npm run package_auth_lib_prod && npm publish dist/angular-auth-lib"
+    "publish_auth_lib_prod": "npm run package_auth_lib_prod && cd dist && npm publish angular-auth-lib && cd -"
   },
   "private": true,
   "dependencies": {

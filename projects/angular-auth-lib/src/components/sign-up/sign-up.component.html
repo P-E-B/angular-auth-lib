@@ -1,6 +1,6 @@
 <div id="container">
     <h2 mat-dialog-title>{{ signUpDialogTitle }}</h2>
-    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+    <form [formGroup]="userForm" (ngSubmit)="onSubmitUser()">
 
         <div id="columns">
             <div id="left-column">
@@ -28,11 +28,18 @@
             </div>
         </div>
 
-        <button mat-raised-button type="submit" [disabled]="userForm.invalid" [ngStyle]="{
-            'background-color': buttonsBackgroundColor,
-            'color': buttonsColor
-          }">
+        <button
+            *ngIf="!(isSignUpLoading$ | async)"
+            mat-raised-button
+            type="submit"
+            [disabled]="userForm.invalid"
+            [ngStyle]="{
+                'background-color': buttonsBackgroundColor,
+                'color': buttonsColor
+            }"
+        >
             {{ signupButtonTraduction }}
         </button>
+        <mat-spinner *ngIf="isSignUpLoading$ | async" [diameter]="36"></mat-spinner>
     </form>
 </div>

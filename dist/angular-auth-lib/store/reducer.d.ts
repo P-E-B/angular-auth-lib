@@ -4,6 +4,9 @@ import { User } from '../models/user.models';
 export interface AuthState {
     isAuthenticated: boolean;
     isSignUpLoading: boolean;
+    isSendActivationCodeLoading: boolean;
+    isUserActivated: boolean;
+    isUserCreated: boolean;
     isLoginLoading: boolean;
     user: User;
     error: HttpErrorResponse;

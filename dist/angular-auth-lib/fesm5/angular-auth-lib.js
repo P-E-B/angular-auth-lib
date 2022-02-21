@@ -1,9 +1,9 @@
 import { __assign, __decorate, __param, __read, __values } from 'tslib';
 import { InjectionToken, Inject, PLATFORM_ID, ɵɵdefineInjectable, ɵɵinject, Injectable, Component, ViewChild, NgModule } from '@angular/core';
-import { HttpClient, HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { HttpParams, HttpClient, HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { map, withLatestFrom, tap, switchMap, catchError, filter, concatMap } from 'rxjs/operators';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { createFeatureSelector, createSelector, select, Store, StoreModule } from '@ngrx/store';
 import { Validators, FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatDialogRef, MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -63,6 +63,10 @@ var AuthService = /** @class */ (function () {
     AuthService.prototype.sendPassword = function (mail) {
         return this.http.post(this.apiUrls.sendBackPasswordUrl, { email: mail });
     };
+    AuthService.prototype.sendActivationCode = function (activationCode) {
+        var params = new HttpParams().append('activationCode', activationCode);
+        return this.http.get(this.apiUrls.sendActivationCodeUrl, { params: params });
+    };
     AuthService.prototype.createUser = function (user) {
         return this.http.post(this.apiUrls.signUpUrl, user);
     };
@@ -95,8 +99,14 @@ var ɵ4 = function (state) { return state.usersList; };
 var selectUsersList = createSelector(selectAuthState, ɵ4); // list of colleagues of the current user for example
 var ɵ5 = function (state) { return state.isSignUpLoading; };
 var selectIsSignUpLoading = createSelector(selectAuthState, ɵ5);
-var ɵ6 = function (state) { return state.isLoginLoading; };
-var selectIsLoginLoading = createSelector(selectAuthState, ɵ6);
+var ɵ6 = function (state) { return state.isSendActivationCodeLoading; };
+var selectIsSendActivationCodeLoading = createSelector(selectAuthState, ɵ6);
+var ɵ7 = function (state) { return state.isUserActivated; };
+var selectIsActivated = createSelector(selectAuthState, ɵ7);
+var ɵ8 = function (state) { return state.isUserCreated; };
+var selectIsUserCreated = createSelector(selectAuthState, ɵ8);
+var ɵ9 = function (state) { return state.isLoginLoading; };
+var selectIsLoginLoading = createSelector(selectAuthState, ɵ9);
 
 var AuthGuard = /** @class */ (function () {
     function AuthGuard(store, router, platformId) {
@@ -192,6 +202,9 @@ var AUTH_ACTIONS_TYPE;
     AUTH_ACTIONS_TYPE["SIGN_UP"] = "[Auth] User tries to sign up";
     AUTH_ACTIONS_TYPE["SIGN_UP_SUCCESS"] = "[Auth] Sign up success";
     AUTH_ACTIONS_TYPE["SIGN_UP_FAILURE"] = "[Auth] Sign up failure";
+    AUTH_ACTIONS_TYPE["SEND_ACTIVATION_CODE"] = "[Auth] User sends his activation code";
+    AUTH_ACTIONS_TYPE["SEND_ACTIVATION_CODE_SUCCESS"] = "[Auth] Success while sending the activation";
+    AUTH_ACTIONS_TYPE["SEND_ACTIVATION_CODE_FAILURE"] = "[Auth] Activation code failure";
     AUTH_ACTIONS_TYPE["LOG_IN"] = "[Auth] User tries to log in";
     AUTH_ACTIONS_TYPE["LOG_IN_SUCCESS"] = "[Auth] Log in success";
     AUTH_ACTIONS_TYPE["LOG_IN_FAILURE"] = "[Auth] Log in failure";
@@ -207,6 +220,7 @@ var AUTH_ACTIONS_TYPE;
     AUTH_ACTIONS_TYPE["SEND_PASSWORD_SUCCESS"] = "[Auth] User has received his password";
     AUTH_ACTIONS_TYPE["SEND_PASSWORD_FAILURE"] = "[Auth] Error in the process of sending the password to the user";
     AUTH_ACTIONS_TYPE["UPDATE_USER"] = "[Auth] Update of user";
+    AUTH_ACTIONS_TYPE["RESET_AUTH_STATE"] = "[Auth] Reset Auth state";
 })(AUTH_ACTIONS_TYPE || (AUTH_ACTIONS_TYPE = {}));
 var OpenSignUpDialog = /** @class */ (function () {
     function OpenSignUpDialog() {
@@ -233,6 +247,26 @@ var SignUpFailure = /** @class */ (function () {
         this.type = AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE;
     }
     return SignUpFailure;
+}());
+var SendActivationCode = /** @class */ (function () {
+    function SendActivationCode(payload) {
+        this.payload = payload;
+        this.type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE;
+    }
+    return SendActivationCode;
+}());
+var SendActivationCodeSuccess = /** @class */ (function () {
+    function SendActivationCodeSuccess() {
+        this.type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS;
+    }
+    return SendActivationCodeSuccess;
+}());
+var SendActivationCodeFailure = /** @class */ (function () {
+    function SendActivationCodeFailure(payload) {
+        this.payload = payload;
+        this.type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE;
+    }
+    return SendActivationCodeFailure;
 }());
 var LogIn = /** @class */ (function () {
     function LogIn(payload) {
@@ -333,6 +367,12 @@ var UpdateUser = /** @class */ (function () {
         this.type = AUTH_ACTIONS_TYPE.UPDATE_USER;
     }
     return UpdateUser;
+}());
+var ResetAuthState = /** @class */ (function () {
+    function ResetAuthState() {
+        this.type = AUTH_ACTIONS_TYPE.RESET_AUTH_STATE;
+    }
+    return ResetAuthState;
 }());
 
 var LogInComponent = /** @class */ (function () {
@@ -439,6 +479,7 @@ var SignUpComponent = /** @class */ (function () {
         this.dialogRef = dialogRef;
         this.formBuilder = formBuilder;
         this.store = store;
+        this.isSignUpLoading$ = this.store.pipe(select(selectIsSignUpLoading));
         this.usernamePlaceholder = 'Username';
         this.passwordPlaceholder = 'Password';
         this.firstNamePlaceholder = 'First name';
@@ -470,17 +511,17 @@ var SignUpComponent = /** @class */ (function () {
             enterprise: ''
         });
     };
-    SignUpComponent.prototype.onSubmit = function () {
+    SignUpComponent.prototype.onSubmitUser = function () {
         var newUser = {
             username: this.userForm.value['username'],
             password: this.userForm.value['password'],
             firstName: this.userForm.value['firstName'],
             lastName: this.userForm.value['lastName'],
             email: this.userForm.value['email'],
-            enterprise: this.userForm.value['enterprise'] || null
+            enterprise: this.userForm.value['enterprise'] || null,
+            isActivated: false
         };
         this.store.dispatch(new SignUp(newUser));
-        this.dialogRef.close();
     };
     SignUpComponent.ctorParameters = function () { return [
         { type: undefined, decorators: [{ type: Inject, args: [AUTH_TRADUCTIONS,] }] },
@@ -492,8 +533,8 @@ var SignUpComponent = /** @class */ (function () {
     SignUpComponent = __decorate([
         Component({
             selector: 'auth-lib-sign-up',
-            template: "<div id=\"container\">\n    <h2 mat-dialog-title>{{ signUpDialogTitle }}</h2>\n    <form [formGroup]=\"userForm\" (ngSubmit)=\"onSubmit()\">\n\n        <div id=\"columns\">\n            <div id=\"left-column\">\n                <mat-form-field>\n                    <input matInput [placeholder]=\"usernamePlaceholder\" formControlName=\"username\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"firstNamePlaceholder\" formControlName=\"firstName\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"emailPlaceholder\" formControlName=\"email\" autocomplete=\"off\">\n                </mat-form-field>\n            </div>\n\n            <div id=\"right-column\">\n                <mat-form-field>\n                    <input matInput type=\"password\" [placeholder]=\"passwordPlaceholder\" formControlName=\"password\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"lastNamePlaceholder\" formControlName=\"lastName\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"enterprisePlaceholder\" formControlName=\"enterprise\" autocomplete=\"off\">\n                </mat-form-field>\n            </div>\n        </div>\n\n        <button mat-raised-button type=\"submit\" [disabled]=\"userForm.invalid\" [ngStyle]=\"{\n            'background-color': buttonsBackgroundColor,\n            'color': buttonsColor\n          }\">\n            {{ signupButtonTraduction }}\n        </button>\n    </form>\n</div>\n",
-            styles: ["#container{display:flex;flex-direction:column;width:600px}#container form{margin-top:20px;display:flex;flex-direction:column;justify-content:space-between}#container form #columns{display:flex;flex-direction:row;justify-content:space-between}#container form #columns #left-column{margin-right:20px}#container form #columns #left-column,#container form #columns #right-column{display:flex;flex-direction:column;justify-content:space-between;width:100%}#container form #columns mat-form-field{width:100%}#container button{margin-top:20px;-ms-grid-row-align:center;align-self:center}"]
+            template: "<div id=\"container\">\n    <h2 mat-dialog-title>{{ signUpDialogTitle }}</h2>\n    <form [formGroup]=\"userForm\" (ngSubmit)=\"onSubmitUser()\">\n\n        <div id=\"columns\">\n            <div id=\"left-column\">\n                <mat-form-field>\n                    <input matInput [placeholder]=\"usernamePlaceholder\" formControlName=\"username\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"firstNamePlaceholder\" formControlName=\"firstName\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"emailPlaceholder\" formControlName=\"email\" autocomplete=\"off\">\n                </mat-form-field>\n            </div>\n\n            <div id=\"right-column\">\n                <mat-form-field>\n                    <input matInput type=\"password\" [placeholder]=\"passwordPlaceholder\" formControlName=\"password\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"lastNamePlaceholder\" formControlName=\"lastName\" autocomplete=\"off\">\n                </mat-form-field>\n                <mat-form-field>\n                    <input matInput [placeholder]=\"enterprisePlaceholder\" formControlName=\"enterprise\" autocomplete=\"off\">\n                </mat-form-field>\n            </div>\n        </div>\n\n        <button\n            *ngIf=\"!(isSignUpLoading$ | async)\"\n            mat-raised-button\n            type=\"submit\"\n            [disabled]=\"userForm.invalid\"\n            [ngStyle]=\"{\n                'background-color': buttonsBackgroundColor,\n                'color': buttonsColor\n            }\"\n        >\n            {{ signupButtonTraduction }}\n        </button>\n        <mat-spinner *ngIf=\"isSignUpLoading$ | async\" [diameter]=\"36\"></mat-spinner>\n    </form>\n</div>\n",
+            styles: ["#container{display:flex;flex-direction:column;width:600px}#container form{margin-top:20px;display:flex;flex-direction:column;justify-content:space-between}#container form #columns{display:flex;flex-direction:row;justify-content:space-between}#container form #columns #left-column{margin-right:20px}#container form #columns #left-column,#container form #columns #right-column{display:flex;flex-direction:column;justify-content:space-between;width:100%}#container mat-form-field{width:100%}#container button{margin-top:20px;-ms-grid-row-align:center;align-self:center}"]
         }),
         __param(0, Inject(AUTH_TRADUCTIONS)),
         __param(1, Inject(AUTH_STYLES))
@@ -501,9 +542,70 @@ var SignUpComponent = /** @class */ (function () {
     return SignUpComponent;
 }());
 
+var ActivateUserComponent = /** @class */ (function () {
+    function ActivateUserComponent(store, route, traductions, styles, images) {
+        this.store = store;
+        this.route = route;
+        this.traductions = traductions;
+        this.styles = styles;
+        this.images = images;
+        this.isSendActivationCodeLoading$ = this.store.pipe(select(selectIsSendActivationCodeLoading));
+        this.activationCodePlaceholder = 'Enter your activation code';
+        this.buttonsBackgroundColor = '#3f51b5';
+        this.buttonsColor = 'white';
+        this.sendActivationButtonTraduction = 'Send';
+    }
+    ActivateUserComponent.prototype.ngOnInit = function () {
+        this.sendActivationButtonTraduction = get(this.traductions || {}, 'buttons.sendActivationCode', this.sendActivationButtonTraduction);
+        this.activationCodePlaceholder = get(this.traductions || {}, 'form.activationCodePlaceholder', this.activationCodePlaceholder);
+        this.buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
+        this.buttonsColor = get(this.styles || {}, 'buttonsColor', this.buttonsColor);
+    };
+    ActivateUserComponent.prototype.ngAfterViewInit = function () {
+        var _this = this;
+        var activationCode = this.route.snapshot.paramMap.get('activationCode');
+        if (activationCode) {
+            setTimeout(function () {
+                _this.activationCodeInput.nativeElement.value = activationCode;
+                _this.onSubmitActivationCode();
+            });
+        }
+    };
+    ActivateUserComponent.prototype.onSubmitActivationCode = function () {
+        var activationCode = this.activationCodeInput.nativeElement.value;
+        if (activationCode) {
+            this.store.dispatch(new SendActivationCode(activationCode));
+        }
+    };
+    ActivateUserComponent.ctorParameters = function () { return [
+        { type: Store },
+        { type: ActivatedRoute },
+        { type: undefined, decorators: [{ type: Inject, args: [AUTH_TRADUCTIONS,] }] },
+        { type: undefined, decorators: [{ type: Inject, args: [AUTH_STYLES,] }] },
+        { type: undefined, decorators: [{ type: Inject, args: [AUTH_IMAGES_URLS,] }] }
+    ]; };
+    __decorate([
+        ViewChild('activationCode')
+    ], ActivateUserComponent.prototype, "activationCodeInput", void 0);
+    ActivateUserComponent = __decorate([
+        Component({
+            selector: 'auth-lib-activate-user',
+            template: "<div class=\"activate-password-container\" [ngStyle]=\"{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}\">\n  <mat-card class=\"mat-elevation-z8\">\n    <img *ngIf=\"images.logoImageUrl && images.logoImageUrl.length >= 1\" [src]=\"images.logoImageUrl\">\n      <mat-form-field>\n        <input matInput [placeholder]=\"activationCodePlaceholder\" #activationCode>\n      </mat-form-field>\n    \n      <button\n          *ngIf=\"!(isSendActivationCodeLoading$ | async)\"\n          mat-raised-button\n          type=\"button\"\n          [disabled]=\"!(this.activationCodeInput && this.activationCodeInput.nativeElement && this.activationCodeInput.nativeElement.value)\"\n          (click)=\"onSubmitActivationCode()\"\n          [ngStyle]=\"{\n            'background-color': buttonsBackgroundColor,\n            'color': buttonsColor\n          }\"\n      >\n          {{ sendActivationButtonTraduction }}\n      </button>\n      <mat-spinner *ngIf=\"isSendActivationCodeLoading$ | async\" [diameter]=\"36\"></mat-spinner>\n  </mat-card>\n</div>\n",
+            styles: [".activate-password-container{display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%;width:100%;flex:1;background-size:cover}.activate-password-container mat-card{display:flex;flex-direction:column;justify-content:center;align-items:center;height:400px;width:400px;box-sizing:border-box;padding:2%}.activate-password-container mat-card img{display:block;max-width:200px;max-height:100px;width:auto;height:auto;margin-bottom:20px}.activate-password-container mat-card mat-form-field{width:75%;font-size:16px}.activate-password-container mat-card button,.activate-password-container mat-card mat-spinner{margin-top:20px}"]
+        }),
+        __param(2, Inject(AUTH_TRADUCTIONS)),
+        __param(3, Inject(AUTH_STYLES)),
+        __param(4, Inject(AUTH_IMAGES_URLS))
+    ], ActivateUserComponent);
+    return ActivateUserComponent;
+}());
+
 var initialState = {
     isAuthenticated: false,
     isSignUpLoading: false,
+    isSendActivationCodeLoading: false,
+    isUserActivated: null,
+    isUserCreated: null,
     isLoginLoading: false,
     user: null,
     error: null,
@@ -516,9 +618,15 @@ function authReducer(state, action) {
         case AUTH_ACTIONS_TYPE.SIGN_UP:
             return __assign(__assign({}, state), { error: null, isSignUpLoading: true });
         case AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE:
-            return __assign(__assign({}, state), { error: action.payload, isSignUpLoading: false });
+            return __assign(__assign({}, state), { error: action.payload, isSignUpLoading: false, isUserCreated: false });
         case AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS:
-            return __assign(__assign({}, state), { error: null, isSignUpLoading: false });
+            return __assign(__assign({}, state), { error: null, isSignUpLoading: false, isUserCreated: true });
+        case AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE:
+            return __assign(__assign({}, state), { error: null, isSendActivationCodeLoading: true });
+        case AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE:
+            return __assign(__assign({}, state), { error: action.payload, isSendActivationCodeLoading: false, isUserActivated: false });
+        case AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS:
+            return __assign(__assign({}, state), { error: null, isSendActivationCodeLoading: false, isUserActivated: true });
         case AUTH_ACTIONS_TYPE.LOG_IN:
             return __assign(__assign({}, state), { error: null, isLoginLoading: true });
         case AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS:
@@ -540,6 +648,8 @@ function authReducer(state, action) {
             return __assign(__assign({}, state), { isPasswordBeingChanged: false });
         case AUTH_ACTIONS_TYPE.UPDATE_USER:
             return __assign(__assign({}, state), { user: __assign(__assign({}, state.user), action.payload) });
+        case AUTH_ACTIONS_TYPE.RESET_AUTH_STATE:
+            return initialState;
         default:
             return state;
     }
@@ -561,8 +671,17 @@ var AuthEffects = /** @class */ (function () {
         this.SignUp$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SIGN_UP), map(function (action) { return action.payload; }), switchMap(function (user) { return _this.authService.createUser(user).pipe(map(function () { return new SignUpSuccess(); }), catchError(function (error) { return of(new SignUpFailure(error)); })); }));
         this.SignUpSuccess$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS), tap(function () {
             _this.toastService.success(get(_this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!'));
+            if (_this.dialogRef) {
+                _this.dialogRef.close();
+            }
         }));
-        this.SignUpFailure$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE), tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.signupFailure', 'Please try again with a new username.')); }));
+        this.SignUpFailure$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE), map(function (action) { return action.payload; }), tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.signupFailure', 'Please try again.')); }));
+        this.SendActivationCode$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE), map(function (action) { return action.payload; }), switchMap(function (activationCode) { return _this.authService.sendActivationCode(activationCode).pipe(map(function () { return new SendActivationCodeSuccess(); }), catchError(function (error) { return of(new SendActivationCodeFailure(error)); })); }));
+        this.SendActivationCodeSuccess$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS), tap(function () {
+            _this.toastService.success(get(_this.traductions || {}, 'messages.sendActivationCodeSuccess', 'Your account has been verified!'));
+            _this.router.navigate(['log-in']);
+        }), map(function () { return new ResetAuthState(); }));
+        this.SendActivationCodeFailure$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE), tap(function (error) { return _this.toastService.error(get(_this.traductions || {}, 'messages.sendActivationCodeFailure', 'Please try again with the correct code.')); }));
         this.LogIn$ = this.actions.pipe(ofType(AUTH_ACTIONS_TYPE.LOG_IN), filter(function (action) { return isPlatformBrowser(_this.platformId); }), map(function (action) { return action.payload; }), switchMap(function (user) { return _this.authService.login(user).pipe(concatMap(function (loggedInUser) {
             sessionStorage.setItem('token', loggedInUser.token.token);
             return _this.authService.getUserInformation().pipe(map(function (_a) {
@@ -625,6 +744,15 @@ var AuthEffects = /** @class */ (function () {
     __decorate([
         Effect({ dispatch: false })
     ], AuthEffects.prototype, "SignUpFailure$", void 0);
+    __decorate([
+        Effect()
+    ], AuthEffects.prototype, "SendActivationCode$", void 0);
+    __decorate([
+        Effect()
+    ], AuthEffects.prototype, "SendActivationCodeSuccess$", void 0);
+    __decorate([
+        Effect({ dispatch: false })
+    ], AuthEffects.prototype, "SendActivationCodeFailure$", void 0);
     __decorate([
         Effect()
     ], AuthEffects.prototype, "LogIn$", void 0);
@@ -690,7 +818,7 @@ var AuthModule = /** @class */ (function () {
     var AuthModule_1;
     AuthModule = AuthModule_1 = __decorate([
         NgModule({
-            declarations: [LogInComponent, ForgottenPasswordComponent, SignUpComponent],
+            declarations: [LogInComponent, ForgottenPasswordComponent, SignUpComponent, ActivateUserComponent],
             imports: [
                 CommonModule,
                 HttpClientModule,
@@ -711,7 +839,7 @@ var AuthModule = /** @class */ (function () {
                 })
             ],
             entryComponents: [ForgottenPasswordComponent],
-            exports: [LogInComponent, ForgottenPasswordComponent],
+            exports: [LogInComponent, ForgottenPasswordComponent, SignUpComponent, ActivateUserComponent],
             providers: [AuthGuard]
         })
     ], AuthModule);
@@ -726,5 +854,5 @@ var AuthModule = /** @class */ (function () {
  * Generated bundle index. Do not edit.
  */
 
-export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, UpdateUser, authReducer, initialState, selectAuthState, selectIsAuthenticated, selectIsLoginLoading, selectIsPasswordBeingChanged, selectIsSignUpLoading, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, ɵ5, ɵ6, AuthEffects as ɵa };
+export { AUTH_ACTIONS_TYPE, AUTH_API_URLS, AUTH_IMAGES_URLS, AUTH_RESET_ACTIONS, AUTH_STYLES, AUTH_TRADUCTIONS, ActivateUserComponent, AuthGuard, AuthModule, AuthService, ChangePassword, ChangePasswordFailure, ChangePasswordSuccess, ForgottenPasswordComponent, LoadUserInformation, LoadUserInformationFailure, LoadUserInformationSuccess, LogIn, LogInComponent, LogInFailure, LogInSuccess, LogOut, OpenForgottenPasswordDialog, OpenSignUpDialog, ResetAuthState, SendActivationCode, SendActivationCodeFailure, SendActivationCodeSuccess, SendPassword, SendPasswordFailure, SendPasswordSuccess, SignUp, SignUpComponent, SignUpFailure, SignUpSuccess, TokenInterceptor, UpdateUser, authReducer, initialState, selectAuthState, selectIsActivated, selectIsAuthenticated, selectIsLoginLoading, selectIsPasswordBeingChanged, selectIsSendActivationCodeLoading, selectIsSignUpLoading, selectIsUserCreated, selectLogInError, selectUser, selectUsersList, ɵ0, ɵ1, ɵ2, ɵ3, ɵ4, ɵ5, ɵ6, ɵ7, ɵ8, ɵ9, AuthEffects as ɵa };
 //# sourceMappingURL=angular-auth-lib.js.map

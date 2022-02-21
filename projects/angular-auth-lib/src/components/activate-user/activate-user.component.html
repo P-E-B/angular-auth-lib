@@ -1,0 +1,23 @@
+<div class="activate-password-container" [ngStyle]="{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}">
+  <mat-card class="mat-elevation-z8">
+    <img *ngIf="images.logoImageUrl && images.logoImageUrl.length >= 1" [src]="images.logoImageUrl">
+      <mat-form-field>
+        <input matInput [placeholder]="activationCodePlaceholder" #activationCode>
+      </mat-form-field>
+    
+      <button
+          *ngIf="!(isSendActivationCodeLoading$ | async)"
+          mat-raised-button
+          type="button"
+          [disabled]="!(this.activationCodeInput && this.activationCodeInput.nativeElement && this.activationCodeInput.nativeElement.value)"
+          (click)="onSubmitActivationCode()"
+          [ngStyle]="{
+            'background-color': buttonsBackgroundColor,
+            'color': buttonsColor
+          }"
+      >
+          {{ sendActivationButtonTraduction }}
+      </button>
+      <mat-spinner *ngIf="isSendActivationCodeLoading$ | async" [diameter]="36"></mat-spinner>
+  </mat-card>
+</div>

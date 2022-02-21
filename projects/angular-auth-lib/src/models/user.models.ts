@@ -15,6 +15,7 @@ export interface BaseUser {
     allowedUrls: string[];
     token?: Token;
     password?: string;
+    isActivated: boolean;
 }
 
 export interface User extends BaseUser {

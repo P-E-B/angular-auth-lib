@@ -6,6 +6,9 @@ export declare enum AUTH_ACTIONS_TYPE {
     SIGN_UP = "[Auth] User tries to sign up",
     SIGN_UP_SUCCESS = "[Auth] Sign up success",
     SIGN_UP_FAILURE = "[Auth] Sign up failure",
+    SEND_ACTIVATION_CODE = "[Auth] User sends his activation code",
+    SEND_ACTIVATION_CODE_SUCCESS = "[Auth] Success while sending the activation",
+    SEND_ACTIVATION_CODE_FAILURE = "[Auth] Activation code failure",
     LOG_IN = "[Auth] User tries to log in",
     LOG_IN_SUCCESS = "[Auth] Log in success",
     LOG_IN_FAILURE = "[Auth] Log in failure",
@@ -20,7 +23,8 @@ export declare enum AUTH_ACTIONS_TYPE {
     SEND_PASSWORD = "[Auth] User has asked for having back a new password",
     SEND_PASSWORD_SUCCESS = "[Auth] User has received his password",
     SEND_PASSWORD_FAILURE = "[Auth] Error in the process of sending the password to the user",
-    UPDATE_USER = "[Auth] Update of user"
+    UPDATE_USER = "[Auth] Update of user",
+    RESET_AUTH_STATE = "[Auth] Reset Auth state"
 }
 export declare class OpenSignUpDialog implements Action {
     readonly type = AUTH_ACTIONS_TYPE.OPEN_SIGN_UP_DIALOG;
@@ -36,6 +40,19 @@ export declare class SignUpSuccess implements Action {
 export declare class SignUpFailure implements Action {
     payload: HttpErrorResponse;
     readonly type = AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE;
+    constructor(payload: HttpErrorResponse);
+}
+export declare class SendActivationCode implements Action {
+    payload: string;
+    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE;
+    constructor(payload: string);
+}
+export declare class SendActivationCodeSuccess implements Action {
+    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS;
+}
+export declare class SendActivationCodeFailure implements Action {
+    payload: HttpErrorResponse;
+    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE;
     constructor(payload: HttpErrorResponse);
 }
 export declare class LogIn implements Action {
@@ -123,4 +140,7 @@ export declare class UpdateUser implements Action {
     readonly type = AUTH_ACTIONS_TYPE.UPDATE_USER;
     constructor(payload: Partial<User>);
 }
-export declare type Actions = OpenSignUpDialog | SignUp | SignUpSuccess | SignUpFailure | LogIn | LogInSuccess | LogInFailure | LogOut | LoadUserInformation | LoadUserInformationSuccess | LoadUserInformationFailure | ChangePassword | ChangePasswordSuccess | ChangePasswordFailure | OpenForgottenPasswordDialog | SendPassword | SendPasswordSuccess | SendPasswordFailure | UpdateUser;
+export declare class ResetAuthState implements Action {
+    readonly type = AUTH_ACTIONS_TYPE.RESET_AUTH_STATE;
+}
+export declare type Actions = OpenSignUpDialog | SignUp | SignUpSuccess | SignUpFailure | SendActivationCode | SendActivationCodeSuccess | SendActivationCodeFailure | LogIn | LogInSuccess | LogInFailure | LogOut | LoadUserInformation | LoadUserInformationSuccess | LoadUserInformationFailure | ChangePassword | ChangePasswordSuccess | ChangePasswordFailure | OpenForgottenPasswordDialog | SendPassword | SendPasswordSuccess | SendPasswordFailure | UpdateUser | ResetAuthState;

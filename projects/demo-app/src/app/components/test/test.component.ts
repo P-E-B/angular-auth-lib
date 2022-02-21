@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { LogOut, AuthState } from 'angular-auth-lib';
+import { LogOut, AuthState, OpenSignUpDialog } from 'angular-auth-lib';
 
 @Component({
   selector: 'app-test',
@@ -13,5 +13,9 @@ export class TestComponent {
 
   logout() {
     this.store.dispatch(new LogOut());
+  }
+
+  signup() {
+    this.store.dispatch(new OpenSignUpDialog());
   }
 }

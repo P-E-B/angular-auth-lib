@@ -1,13 +1,14 @@
 import { Component, OnInit, Inject } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Store } from '@ngrx/store';
+import { select, Store } from '@ngrx/store';
 
 import { get } from '../../utils';
 
-import { AuthState } from '../../store/reducer';
-import { User } from '../../models/user.models';
 import { SignUp } from '../../store/actions';
+import { AuthState } from '../../store/reducer';
+import { selectIsSignUpLoading } from '../../store/selectors';
+import { User } from '../../models/user.models';
 import { AUTH_TRADUCTIONS, AuthModuleConfig, AUTH_STYLES } from '../../token';
 
 @Component({
@@ -16,6 +17,8 @@ import { AUTH_TRADUCTIONS, AuthModuleConfig, AUTH_STYLES } from '../../token';
   styleUrls: ['./sign-up.component.scss']
 })
 export class SignUpComponent implements OnInit {
+  isSignUpLoading$ = this.store.pipe(select(selectIsSignUpLoading));
+
   userForm: FormGroup;
 
   usernamePlaceholder = 'Username';
@@ -48,8 +51,8 @@ export class SignUpComponent implements OnInit {
     this.enterprisePlaceholder = get(this.traductions || {}, 'form.enterprisePlaceholder', this.enterprisePlaceholder);
 
     this.signUpDialogTitle = get(this.traductions || {}, 'dialogs.signup', this.signUpDialogTitle);
-
     this.signupButtonTraduction = get(this.traductions || {}, 'buttons.signup', this.signupButtonTraduction);
+
     this.buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
     this.buttonsColor = get(this.styles || {}, 'buttonsColor', this.buttonsColor);
 
@@ -63,16 +66,16 @@ export class SignUpComponent implements OnInit {
     });
   }
 
-  onSubmit() {
+  onSubmitUser() {
     const newUser: Partial<User> = {
       username: this.userForm.value['username'],
       password: this.userForm.value['password'],
       firstName: this.userForm.value['firstName'],
       lastName: this.userForm.value['lastName'],
       email: this.userForm.value['email'],
-      enterprise: this.userForm.value['enterprise'] || null
+      enterprise: this.userForm.value['enterprise'] || null,
+      isActivated: false
     };
     this.store.dispatch(new SignUp(newUser));
-    this.dialogRef.close()
   }
 }

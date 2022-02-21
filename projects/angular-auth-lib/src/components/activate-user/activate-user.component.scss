@@ -1,0 +1,40 @@
+.activate-password-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    flex: 1;
+    background-size: cover;
+
+    mat-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 400px;
+        width: 400px;
+        box-sizing: border-box;
+        padding: 2%;
+
+        img {
+            display: block;
+            max-width: 200px;
+            max-height: 100px;
+            width: auto;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        mat-form-field {
+            width: 75%;
+            font-size: 16px;
+        }
+
+        button, mat-spinner {
+            margin-top: 20px;
+        }
+    }
+}
+
