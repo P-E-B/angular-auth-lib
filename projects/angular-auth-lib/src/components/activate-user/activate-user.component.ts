@@ -45,6 +45,7 @@ export class ActivateUserComponent implements OnInit, AfterViewInit {
     if (activationCode) {
       setTimeout(() => {
         this.activationCodeInput.nativeElement.value = activationCode;
+        this.activationCodeInput.nativeElement.disabled = true;
         this.onSubmitActivationCode();
       });
     }

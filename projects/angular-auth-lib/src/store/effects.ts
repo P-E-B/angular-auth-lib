@@ -78,14 +78,9 @@ export class AuthEffects {
   @Effect({ dispatch: false })
   SignUpSuccess$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS),
-    tap(() => {
-      this.toastService.success(
-        get(this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!')
-      );
-      if (this.dialogRef) {
-        this.dialogRef.close();
-      }
-    })
+    tap(() => this.toastService.success(
+      get(this.traductions || {}, 'messages.signupSuccess', 'Your account has been created!')
+    ))
   );
 
   @Effect({ dispatch: false })
@@ -114,7 +109,10 @@ export class AuthEffects {
       this.toastService.success(
         get(this.traductions || {}, 'messages.sendActivationCodeSuccess', 'Your account has been verified!')
       );
-      this.router.navigate(['log-in']);
+      if (this.dialogRef) {
+        this.dialogRef.close();
+        this.router.navigate(['log-in']);
+      }
     }),
     map(() => new ResetAuthState())
   );

@@ -26,6 +26,7 @@ Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
 
 ## Change log
 
+* **0.0.16**: SignUpSuccess does not close the dialog anymore
 * **0.0.16**: Adding support for activation code to better control sign-ups
 * **0.0.15**: Removing lodash-es
 * **0.0.14**: Removing lodash and putting instead lodash-es for tree shaking

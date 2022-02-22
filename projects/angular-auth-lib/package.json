@@ -1,6 +1,6 @@
 {
   "name": "angular-auth-lib",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "author": {
     "name": "Paul-Emile Brotons",
     "email": "paul.emile.brotons@gmail.com"
@@ -11,7 +11,17 @@
   },
   "license": "MIT",
   "description": "This is a full implementation of authentication in Angular with NgRx, RxJS and Material.",
-  "keywords" :["angular", "authentication", "auth", "library", "NgRx", "RxJS", "ng", "typescript", "components"],
+  "keywords": [
+    "angular",
+    "authentication",
+    "auth",
+    "library",
+    "NgRx",
+    "RxJS",
+    "ng",
+    "typescript",
+    "components"
+  ],
   "peerDependencies": {
     "@angular/common": "^9.1.1",
     "@angular/core": "^9.1.1",
