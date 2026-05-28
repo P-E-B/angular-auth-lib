@@ -1,17 +1,23 @@
-import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
-import { PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot, UrlTree } from '@angular/router';
+import { inject } from '@angular/core';
 
-import { Observable, map, withLatestFrom } from 'rxjs';
+import { Observable, map, take, withLatestFrom } from 'rxjs';
 import { Store } from '@ngrx/store';
 
-import { selectIsAuthenticated, selectUser } from '../store/selectors';
+import { authFeature } from '../store/reducer';
+import { AUTH_BEHAVIOR } from '../token';
 
 /**
- * Functional route guard that grants access when the current user is
- * authenticated and the requested route's path is present in the user's
- * `allowedUrls`. Otherwise it stores the attempted URL (browser only) and
- * redirects to `/log-in`.
+ * Functional route guard.
+ *
+ * Grants access when the user is authenticated **and** the application's
+ * `AuthBehaviorConfig.canActivate` callback returns `true` for the current user
+ * and route. Otherwise returns a `UrlTree` to the configured `loginRoute` with
+ * the attempted URL preserved as `?returnUrl=` for the login effect to honour.
+ *
+ * The library does not assume any shape on the user record — authorization
+ * logic lives entirely in the `canActivate` callback supplied to
+ * `provideAuth({ behavior: { canActivate } })`.
  *
  * Usage:
  * ```ts
@@ -23,26 +29,21 @@ import { selectIsAuthenticated, selectUser } from '../store/selectors';
 export const authGuard: CanActivateFn = (
   route: ActivatedRouteSnapshot,
   state: RouterStateSnapshot
-): Observable<boolean> => {
+): Observable<boolean | UrlTree> => {
   const store = inject(Store);
   const router = inject(Router);
-  const platformId = inject(PLATFORM_ID);
+  const behavior = inject(AUTH_BEHAVIOR);
 
-  return store.select(selectUser).pipe(
-    withLatestFrom(store.select(selectIsAuthenticated)),
-    map(([user, isAuthenticated]) => {
-      const path = route.routeConfig?.path ?? '';
-      const isAllowed = !!user && user.allowedUrls.includes(path);
-
-      if (isAllowed && isAuthenticated) {
+  return store.select(authFeature.selectIsAuthenticated).pipe(
+    withLatestFrom(store.select(authFeature.selectUser)),
+    take(1),
+    map(([isAuthenticated, user]) => {
+      if (isAuthenticated && behavior.canActivate(user, route, state)) {
         return true;
       }
-
-      if (isAllowed && isPlatformBrowser(platformId)) {
-        sessionStorage.setItem('redirectedUrlAfterLogIn', state.url);
-      }
-      router.navigate(['log-in']);
-      return false;
+      return router.createUrlTree([behavior.loginRoute ?? 'log-in'], {
+        queryParams: { returnUrl: state.url },
+      });
     })
   );
 };

@@ -1,4 +1,2 @@
-<p>
-    Test if user can signup correctly!
-    <button mat-raised-button (click)="signup()">Sign up</button>
-</p>
+<p>Logged in as: {{ user()?.email }}</p>
+<button type="button" (click)="logout()">Log out</button>

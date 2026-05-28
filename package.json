@@ -23,21 +23,13 @@
     "publish_auth_lib_prod": "npm run package_auth_lib_prod && npm publish dist/angular-auth-lib/"
   },
   "dependencies": {
-    "@angular/animations": "^20.0.0",
-    "@angular/cdk": "^20.0.0",
     "@angular/common": "^20.0.0",
-    "@angular/compiler": "^20.0.0",
     "@angular/core": "^20.0.0",
     "@angular/forms": "^20.0.0",
-    "@angular/material": "^20.0.0",
     "@angular/platform-browser": "^20.0.0",
-    "@angular/platform-browser-dynamic": "^20.0.0",
     "@angular/router": "^20.0.0",
     "@ngrx/effects": "^20.0.0",
-    "@ngrx/operators": "^20.0.0",
     "@ngrx/store": "^20.0.0",
-    "@ngrx/store-devtools": "^20.0.0",
-    "ngx-toastr": "^19.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.8.0",
     "zone.js": "~0.15.0"
@@ -50,7 +42,9 @@
     "@angular-eslint/schematics": "^20.0.0",
     "@angular-eslint/template-parser": "^20.0.0",
     "@angular/cli": "^20.0.0",
+    "@angular/compiler": "^20.0.0",
     "@angular/compiler-cli": "^20.0.0",
+    "@ngrx/store-devtools": "^20.0.0",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -63,7 +57,6 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "ng-packagr": "^20.0.0",
-    "ts-node": "~10.9.0",
     "typescript": "~5.8.0"
   },
   "overrides": {

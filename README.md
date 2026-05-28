@@ -1,56 +1,43 @@
 # Angular Auth Library
 
-Drop-in authentication for **Angular 20+** apps backed by **NgRx**, **RxJS** and **Angular Material** — login, sign-up, password reset and account activation, with a fully wired store (actions, reducer, effects, selectors), a route guard and an HTTP token interceptor.
-
-Ships as **standalone components** with a single `provideAuth()` entry point. Set up in under 10 minutes.
-
-It contains:
-
-* `AuthService`
-* `authGuard` (functional `CanActivateFn`)
-* `tokenInterceptor` (functional `HttpInterceptorFn`)
-* a `User` model you can extend
-* an NgRx feature (`authFeature`, actions, effects, selectors)
-* four standalone components:
-  1. `LogInComponent` — login form
-  2. `ForgottenPasswordComponent` — request a new password
-  3. `SignUpComponent` — create an account (username, password, first/last name, email, optional enterprise). Opens as a Material dialog via the `OpenSignUpDialog` action.
-  4. `ActivateUserComponent` — activate an account from an emailed code/link
-
-
-## Repo
-
-Source code: <https://github.com/P-E-B/angular-auth-lib.git>
-
-
-## Installation
+Headless JWT authentication for **Angular 20+** with **NgRx** — token interceptor with automatic refresh, route guard, and an opaque user store. **Bring your own UI.**
 
 ```sh
-npm i angular-auth-lib
-npm i @angular/material @angular/cdk @ngrx/store @ngrx/effects ngx-toastr
+npm i angular-auth-lib @ngrx/store @ngrx/effects
 ```
+
+That's it. Everything else is already in your Angular app.
+
+
+## What you get
+
+* `provideAuth<TUser>(config)` — single bootstrap call
+* `tokenInterceptor` — attaches `Bearer` to your API origins only; refreshes-and-retries on expiry/401
+* `authGuard` — functional `CanActivateFn`; you supply the authorization predicate
+* `AuthService` — `login`, `refreshToken`, `getToken`, `storeToken`, `getUserInformation`
+* `AuthActions` — `logIn`, `logOut`, `refreshToken`, `loadUserInformation`, `updateUser`, `resetAuthState` (+ `…Success`/`…Failure`)
+* `AuthState` — `{ isAuthenticated: boolean; user: unknown }`
+* `selectIsAuthenticated`, `selectAuthUser<TUser>()`, `selectAuthState`
+
+The library never assumes a shape for your user record. It fetches it, stores it, and hands it back typed.
 
 
 ## Quickstart
-
-You'll need:
-
-* an Angular 20 standalone app with NgRx (`provideStore()` + `provideEffects()`)
-* a backend implementing the auth endpoints (see **Configuration** below)
-
-### 1. Register `provideAuth()` in your app config
 
 ```ts
 // app.config.ts
 import { ApplicationConfig } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { provideAuth, tokenInterceptor } from 'angular-auth-lib';
 
-import { routes } from './app.routes';
+interface MyUser {
+  id: string;
+  email: string;
+  roles: string[];
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -58,19 +45,20 @@ export const appConfig: ApplicationConfig = {
     provideStore(),
     provideEffects(),
     provideHttpClient(withInterceptors([tokenInterceptor])),
-    provideAnimationsAsync(),
-    provideAuth({
+    provideAuth<MyUser>({
       urls: {
-        accessTokenUrl: '/api/log-in',
-        userInformationUrl: '/api/user-information',
-        sendBackPasswordUrl: '/api/user-management',
-        changePasswordUrl: '/api/user-management',
-        signUpUrl: '/api/sign-up',
-        sendActivationCodeUrl: '/api/activation',
+        accessTokenUrl: '/api/token',
+        refreshTokenUrl: '/api/token/refresh',   // optional
+        userInformationUrl: '/api/me',           // optional
       },
-      images: {
-        loginBackgroundImageUrl: 'assets/login-bg.jpg',
-        logoImageUrl: 'assets/logo.png',
+      behavior: {
+        // REQUIRED — no permissive default. Return true for allow-all.
+        canActivate: (user, route) => {
+          const role = route.data?.['role'] as string | undefined;
+          return role ? !!user && user.roles.includes(role) : true;
+        },
+        redirectAfterLogin: () => '/dashboard',  // default '/'
+        loginRoute: 'signin',                    // default 'log-in'
       },
     }),
   ],
@@ -78,269 +66,233 @@ export const appConfig: ApplicationConfig = {
 ```
 
 ```ts
-// main.ts
-import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app.component';
-import { appConfig } from './app/app.config';
-
-bootstrapApplication(AppComponent, appConfig).catch(err => console.error(err));
-```
-
-### 2. Add routes and guard
-
-> ⚠️ The login route **must** use the path `'log-in'` — the guard and effects redirect to it by that literal.
-
-```ts
 // app.routes.ts
 import { Routes } from '@angular/router';
-import { LogInComponent, ActivateUserComponent, authGuard } from 'angular-auth-lib';
+import { authGuard } from 'angular-auth-lib';
 
 export const routes: Routes = [
-  { path: '', component: HomePageComponent, pathMatch: 'full' },
-  { path: 'log-in', component: LogInComponent },
-  { path: 'activate', component: ActivateUserComponent },
-  { path: 'example', canActivate: [authGuard], component: ExampleComponent },
-  { path: '**', redirectTo: '' },
+  { path: 'signin', component: MyLoginComponent },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'admin', component: AdminComponent, canActivate: [authGuard], data: { role: 'admin' } },
 ];
 ```
 
-### 3. Global styles
 
-```scss
-// styles.scss
-@use '@angular/material/prebuilt-themes/azure-blue.css';
-@use 'ngx-toastr/toastr';
+## Your login component
 
-@import url('https://fonts.googleapis.com/css?family=Roboto:400,700|Material+Icons');
-
-#toast-container > div { opacity: 1; }
-button:focus { outline: none; }
-body { margin: 0; }
-```
-
-That's it — you have a login page, an auth store, a guard and a token interceptor.
-
-
-## Backend contract
-
-The library expects:
-
-* **`accessTokenUrl`** (POST) — response body must contain `{ "access": "<jwt>", "refresh"?: "<token>" }`
-* **`refreshTokenUrl`** (POST, optional) — body `{ "refresh": "<token>" }`, response `{ "access": "<jwt>", "refresh"?: "<token>" }`
-* **`userInformationUrl`** (GET) — response body must contain `{ "user": { ... } }`
-
-Each user object sent to the frontend must include:
-
-* `token` — when login succeeds
-* `redirectUrlAfterLogin` — where the router sends the user after login
-* `allowedUrls` — paths the guard will permit (enforce permissions on the backend too)
-
-```json
-{
-  "id": 1,
-  "username": "paul",
-  "allowedUrls": ["home"],
-  "dateJoined": "2020-04-27T00:26:59.482740+02:00",
-  "email": "paul.emile.brotons@gmail.com",
-  "enterprise": "MongoDB",
-  "firstName": "Paul-Emile",
-  "lastName": "Brotons",
-  "redirectUrlAfterLogin": "home",
-  "isActivated": true
-}
-```
-
-
-## Configuration
-
-Full `AuthModuleConfig`:
+The library ships no UI. Dispatch `AuthActions.logIn` with whatever credential shape your backend expects — it's posted verbatim.
 
 ```ts
-export interface AuthModuleConfig {
-  urls: {
-    accessTokenUrl: string;
-    userInformationUrl: string;
-    sendBackPasswordUrl: string;
-    refreshTokenUrl?: string;
-    changePasswordUrl?: string;
-    signUpUrl?: string;
-    sendActivationCodeUrl?: string;
-  };
-  images: {
-    loginBackgroundImageUrl: string;
-    logoImageUrl: string;
-  };
-  traductions?: {
-    dialogs?: { signup?: string };
-    buttons?: {
-      login?: string; send?: string; passwordForgotten?: string;
-      signup?: string; sendActivationCode?: string;
-    };
-    form?: {
-      usernamePlaceholder?: string; passwordPlaceholder?: string;
-      emailPlaceholder?: string; firstNamePlaceholder?: string;
-      lastNamePlaceholder?: string; enterprisePlaceholder?: string;
-      activationCodePlaceholder?: string;
-    };
-    messages?: {
-      loginSuccess?: string; loginFailure?: string;
-      signupSuccess?: string; signupFailure?: string;
-      sendActivationCodeSuccess?: string; sendActivationCodeFailure?: string;
-      passwordResetSuccess?: string; passwordResetFailure?: string;
-      changePasswordSuccess?: string; changePasswordFailure?: string;
-    };
-  };
-  styles?: {
-    buttonsColor?: string;            // default 'white'
-    buttonsBackgroundColor?: string;  // default '#3f51b5'
-  };
-  resetActions?: Array<() => Action>; // dispatched on logout to clear other slices
-}
-```
-
-### Refresh tokens (optional)
-
-Set `urls.refreshTokenUrl` to opt in. When the backend returns a `refresh` field on login, the library stores it in `sessionStorage` alongside the access token. From then on `tokenInterceptor` keeps the session alive transparently:
-
-* **Proactive** — before each request, if the JWT's `exp` is within 30 s the interceptor refreshes first, so the request goes out with a valid bearer.
-* **Reactive** — if the server still answers `401` (clock skew, early revocation), it refreshes and replays the original request once.
-
-Concurrent requests share a single in-flight refresh. If the refresh itself fails, `LogOut` is dispatched and the original error is re-thrown.
-
-You can also trigger a refresh imperatively with `store.dispatch(RefreshToken())` or `authService.refreshToken()`, and react to `RefreshTokenSuccess` / `RefreshTokenFailure` in your own effects.
-
-If `refreshTokenUrl` is omitted (or the backend doesn't send `refresh`), behaviour is unchanged from 1.0 — `401`s surface to the caller untouched.
-
-User model:
-
-```ts
-export interface Token { token: string; expiringDate: Date; refreshToken?: string; }
-
-export interface BaseUser {
-  id: number;
-  username?: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  enterprise?: string | null;
-  dateJoined: Date;
-  redirectUrlAfterLogin: string;
-  allowedUrls: string[];
-  isActivated: boolean;
-  token?: Token;
-  password?: string; // only present on the login request
-}
-
-export interface User extends BaseUser {
-  [attribute: string]: unknown; // extend with your own backend fields
-}
-```
-
-
-## Using the store in your components
-
-Read state with `selectSignal`, dispatch with action creators:
-
-```ts
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { Component, inject } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Store } from '@ngrx/store';
-import { selectUser, selectIsPasswordBeingChanged, ChangePassword } from 'angular-auth-lib';
+import { AuthActions, AuthCredentials } from 'angular-auth-lib';
 
 @Component({
-  selector: 'app-user-page',
+  selector: 'app-login',
   imports: [ReactiveFormsModule],
-  templateUrl: './user-page.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <input type="email" formControlName="email" />
+      <input type="password" formControlName="password" />
+      <button type="submit" [disabled]="form.invalid">Log in</button>
+    </form>
+  `,
 })
-export class UserPageComponent {
-  private store = inject(Store);
-  private fb = inject(FormBuilder);
+export class MyLoginComponent {
+  private readonly store = inject(Store);
 
-  user = this.store.selectSignal(selectUser);
-  isPasswordBeingChanged = this.store.selectSignal(selectIsPasswordBeingChanged);
+  readonly form = inject(NonNullableFormBuilder).group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
+  });
 
-  userForm = this.fb.nonNullable.group({ currentPassword: '', nextPassword: '' });
+  submit(): void {
+    const payload: AuthCredentials = this.form.getRawValue();
+    this.store.dispatch(AuthActions.logIn({ payload }));
+  }
+}
+```
 
-  resetPassword() {
-    this.store.dispatch(ChangePassword({ payload: this.userForm.getRawValue() }));
-    this.userForm.reset();
+`AuthCredentials` is `{ email; password }` for convenience, but `logIn` accepts `unknown` — pass `{ username, password }`, `{ phone, otp }`, anything.
+
+
+## Reading the user
+
+```ts
+import { selectAuthUser, selectIsAuthenticated, AuthActions } from 'angular-auth-lib';
+
+const selectCurrentUser = selectAuthUser<MyUser>();
+
+@Component({ /* … */ })
+export class HeaderComponent {
+  private readonly store = inject(Store);
+
+  readonly user = this.store.selectSignal(selectCurrentUser);
+  readonly isAuthenticated = this.store.selectSignal(selectIsAuthenticated);
+
+  logout(): void {
+    this.store.dispatch(AuthActions.logOut());
   }
 }
 ```
 
 ```html
 @if (user(); as u) {
-  <h2>Hello {{ u.firstName }}</h2>
-}
-@if (isPasswordBeingChanged()) {
-  <mat-progress-spinner mode="indeterminate" />
+  <span>{{ u.email }}</span>
+  <button (click)="logout()">Log out</button>
 }
 ```
 
 
-## Actions & selectors
+## Reacting to auth events
 
-**Actions** (also available grouped as `AuthActions.*`):
+Toasts, analytics, side-effects — listen to the actions in your own effect:
+
+```ts
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { AuthActions } from 'angular-auth-lib';
+
+@Injectable()
+export class AppNotificationEffects {
+  private readonly actions$ = inject(Actions);
+  private readonly snackBar = inject(MatSnackBar);
+
+  loginFailed$ = createEffect(
+    () => this.actions$.pipe(
+      ofType(AuthActions.logInFailure),
+      tap(() => this.snackBar.open('Wrong credentials', 'Dismiss')),
+    ),
+    { dispatch: false },
+  );
+
+  // Reset other feature slices on logout
+  logout$ = createEffect(() =>
+    this.actions$.pipe(ofType(AuthActions.logOut), map(() => resetCartState())),
+  );
+}
+```
+
+
+## Backend contract
+
+| Endpoint | Method | Request body | Response body |
+|---|---|---|---|
+| `accessTokenUrl` | POST | your credentials object, verbatim | `{ "access": "<jwt>", "refresh"?: "<token>" }` |
+| `refreshTokenUrl` | POST | `{ "refresh": "<token>" }` | `{ "access": "<jwt>", "refresh"?: "<token>" }` |
+| `userInformationUrl` | GET | — | your user object, verbatim |
+
+The access token must be a JWT with an `exp` claim. The library decodes `exp` for proactive refresh; it never verifies the signature (your server does).
+
+
+## Refresh tokens
+
+Set `urls.refreshTokenUrl` to opt in. When the backend returns a `refresh` field on login, `tokenInterceptor` keeps the session alive transparently:
+
+* **Proactive** — if the JWT's `exp` is within 30 s, refresh before sending.
+* **Reactive** — on `401`, refresh and replay the original request once.
+
+Concurrent requests share a single in-flight refresh. If the refresh itself fails, `AuthActions.logOut` is dispatched and the original error re-thrown.
+
+
+## Login flow
+
+```
+dispatch logIn({ payload })
+  → POST accessTokenUrl → token stored in sessionStorage
+  → GET userInformationUrl (if configured) → user stored in state
+  → dispatch logInSuccess({ payload: { user } })
+  → navigate to ?returnUrl (if set by guard) or behavior.redirectAfterLogin() or '/'
+```
+
+When `authGuard` denies access, it returns a `UrlTree` to `behavior.loginRoute` with `?returnUrl=<attempted-url>`. The login-success effect honours `returnUrl` only when it's a root-relative path — absolute and protocol-relative URLs are rejected to prevent open-redirect attacks.
+
+
+## API reference
+
+### `AuthModuleConfig<TUser>`
+
+```ts
+interface AuthModuleConfig<TUser = unknown> {
+  urls: {
+    accessTokenUrl: string;
+    refreshTokenUrl?: string;
+    userInformationUrl?: string;
+  };
+  behavior: {
+    canActivate: (user: TUser | null, route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => boolean;
+    redirectAfterLogin?: (user: TUser | null) => string;  // default '/'
+    loginRoute?: string;                                   // default 'log-in'
+  };
+}
+```
+
+### `AuthActions`
 
 | Action | Payload |
 |---|---|
-| `LogIn` | `{ payload: Partial<User> }` |
-| `LogOut` | — |
-| `RefreshToken` | — |
-| `OpenSignUpDialog` | — |
-| `SignUp` | `{ payload: Partial<User> }` |
-| `SendActivationCode` | `{ payload: string }` |
-| `ChangePassword` | `{ payload: { currentPassword: string; nextPassword: string } }` |
-| `OpenForgottenPasswordDialog` | — |
-| `SendPassword` | `{ payload: string }` |
-| `UpdateUser` | `{ payload: Partial<User> }` |
-| `LoadUserInformation` | — |
-| `ResetAuthState` | — |
+| `logIn` | `{ payload: unknown }` — posted verbatim to `accessTokenUrl` |
+| `logInSuccess` | `{ payload: { user: unknown } }` |
+| `logInFailure` | `{ payload: HttpErrorResponse }` |
+| `logOut` | — |
+| `refreshToken` | — |
+| `refreshTokenSuccess` | `{ payload: Token }` |
+| `refreshTokenFailure` | `{ payload: HttpErrorResponse }` |
+| `loadUserInformation` | — |
+| `loadUserInformationSuccess` | `{ payload: unknown }` |
+| `loadUserInformationFailure` | `{ payload: HttpErrorResponse }` |
+| `updateUser` | `{ payload: unknown }` — replaces `state.user` |
+| `resetAuthState` | — |
 
-Each has matching `…Success` / `…Failure` actions for effects you may want to react to.
+### Types
 
-**Selectors:** `selectAuthState`, `selectUser`, `selectIsAuthenticated`, `selectLogInError`, `selectIsLoginLoading`, `selectIsPasswordBeingChanged`, `selectIsSignUpLoading`, `selectIsSendActivationCodeLoading`, `selectIsUserCreated`, `selectIsActivated`, `selectUsersList`.
+```ts
+interface Token { token: string; expiringDate: number; refreshToken?: string }
+interface AuthCredentials { email: string; password: string }
+interface AuthState { isAuthenticated: boolean; user: unknown | null }
+```
 
 
-## Migrating from 0.x
+## Migrating from 1.x
 
-| 0.x | 1.0 |
+2.0 is a headless rewrite — UI components, account-management flows, and presentation config are gone. The core auth machinery (interceptor, guard, refresh, store) is unchanged in behaviour.
+
+| 1.x | 2.0 |
 |---|---|
-| `AuthModule.forRoot(cfg)` in `imports` | `provideAuth(cfg)` in `providers` |
-| `canActivate: [AuthGuard]` | `canActivate: [authGuard]` |
-| `HTTP_INTERCEPTORS` → `TokenInterceptor` | `provideHttpClient(withInterceptors([tokenInterceptor]))` |
-| `store.dispatch(new LogIn(user))` | `store.dispatch(LogIn({ payload: user }))` |
-| `store.pipe(select(selectUser))` | `store.selectSignal(selectUser)` |
-| `resetActions: [ResetAppState]` (class) | `resetActions: [resetAppState]` (creator) |
-| `User[k]: any` | `User[k]: unknown` — cast custom fields |
-| Action type `'[Auth] User tries to log in'` | `'[Auth] Log In'` |
+| `npm i @angular/material @angular/cdk ngx-toastr` | — (no UI peers) |
+| `LogInComponent`, `SignUpComponent`, `ForgottenPasswordComponent`, `ActivateUserComponent` | build your own; dispatch `AuthActions.logIn` |
+| `provideAuth({ urls, images, traductions, styles, resetActions })` | `provideAuth<TUser>({ urls, behavior })` |
+| `User`/`BaseUser` with `id`, `firstName`, `allowedUrls`, `redirectUrlAfterLogin`, … | your own type via `selectAuthUser<TUser>()` |
+| guard reads `user.allowedUrls` | `behavior.canActivate(user, route, state)` — **required** |
+| effects read `user.redirectUrlAfterLogin` | `behavior.redirectAfterLogin(user)` |
+| `userInformationUrl` returns `{ user, usersList }` | returns the user object directly |
+| `LogIn({ payload })`, `LogOut()`, … | `AuthActions.logIn({ payload })`, `AuthActions.logOut()` |
+| `selectUser`, `selectUsersList`, `selectIsLoginLoading`, `selectLogInError`, … | `selectIsAuthenticated`, `selectAuthUser<T>()`, `selectAuthState` |
+| `SignUp`, `ChangePassword`, `SendPassword`, `SendActivationCode` actions | removed — call your own backend |
+| toast on success/failure | listen to `AuthActions.*` in your own effect |
+| `resetActions: [resetX]` | `on(AuthActions.logOut, () => initialState)` in your reducer |
+| login route must be `'log-in'` | `behavior.loginRoute` |
+| `Token.expiringDate: Date` | `number` (epoch ms — NgRx-serializable) |
 
 
 ## Change log
 
-* **1.1.0**
-  * Refresh-token support — opt-in via `urls.refreshTokenUrl`; `tokenInterceptor` now refreshes-and-retries on `401`
-  * New `RefreshToken` / `RefreshTokenSuccess` / `RefreshTokenFailure` actions and `AuthService.refreshToken()`
-  * **BREAKING** removed APIs deprecated in 1.0: `AuthModule`, class `AuthGuard`, class `TokenInterceptor`, `AUTH_ACTIONS_TYPE`, `Actions` union, `authReducer` alias, `LogInComponent.isPasswordBeingChanged$` / `isLoginLoading$`
+* **2.0.0** — **BREAKING** headless rewrite
+  * Removed all UI components, `ngx-toastr`, `@angular/material`, `@angular/forms` peers
+  * Removed `BaseUser`/`User` — user record is opaque; new `selectAuthUser<TUser>()` and `provideAuth<TUser>()`
+  * Removed account-management actions (`signUp`, `changePassword`, `sendPassword`, `sendActivationCode`) and `usersList`
+  * Removed PascalCase action aliases — use `AuthActions.*`
+  * `AuthState` reduced to `{ isAuthenticated, user }`
+  * New required `behavior.canActivate` callback (fail-closed); new `redirectAfterLogin`, `loginRoute`
+  * `authGuard` returns `UrlTree` with `?returnUrl=`; login effect validates it against open-redirect
+  * `Token.expiringDate` is now epoch ms
+  * Peer deps: `@angular/{core,common,router}` `^20`, `@ngrx/{store,effects}` `^20`, `rxjs` `^7`
 
-* **1.0.0** — **BREAKING** Angular 20 rewrite
-  * Standalone components, signals, `inject()`, `@if`/`@for` control flow, OnPush
-  * New `provideAuth(config)` entry point for `bootstrapApplication`
-  * Functional `authGuard` / `tokenInterceptor` (class versions kept, deprecated)
-  * NgRx 20: `createActionGroup`, `createFeature` — actions are now **creator functions**, not classes (`LogIn({ payload })` instead of `new LogIn(payload)`)
-  * Library no longer bundles `HttpClientModule` / `BrowserAnimationsModule` — host app provides them
-  * Strict types: `User[k]` is `unknown`, `AuthState` fields are nullable
-  * Peer deps: Angular `^20`, NgRx `^20`, RxJS `^7`, ngx-toastr `^19`
+* **1.1.0** — Refresh-token support; removed 1.0-deprecated APIs
+* **1.0.0** — Angular 20 rewrite (standalone, signals, `provideAuth`)
+* **0.0.1–0.0.16** — see git history
 
-* **0.0.16** — `SignUpSuccess` no longer closes the dialog; activation-code support
-* **0.0.15** — Removed lodash-es
-* **0.0.14** — lodash → lodash-es for tree-shaking
-* **0.0.13** — `isLoading` selector
-* **0.0.12** — `UpdateUser` action
-* **0.0.11** — `BaseUser` interface
-* **0.0.10** — SSR support
-* **0.0.9** — `isSignUpLoading` selector
-* **0.0.5** — `SignUpComponent`
-* **0.0.4** — [BREAKING] `AuthModuleConfig` reshaped
-* **0.0.1** — Initial release
+
+## Repo
+
+Source: <https://github.com/P-E-B/angular-auth-lib.git> · MIT

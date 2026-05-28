@@ -2,32 +2,21 @@ import { EnvironmentProviders, makeEnvironmentProviders } from '@angular/core';
 
 import { provideState } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
-import { provideToastr } from 'ngx-toastr';
 
 import { authFeature } from './store/reducer';
 import { AuthEffects } from './store/effects';
-import {
-  AuthModuleConfig,
-  AUTH_API_URLS,
-  AUTH_IMAGES_URLS,
-  AUTH_TRADUCTIONS,
-  AUTH_RESET_ACTIONS,
-  AUTH_STYLES
-} from './token';
+import { AuthModuleConfig, AUTH_API_URLS, AUTH_BEHAVIOR } from './token';
 
 /**
  * Registers the `angular-auth-lib` feature for a standalone Angular application.
  *
- * Wires up:
- *  - the `AUTH_*` configuration tokens,
- *  - the NgRx `auth` feature state + effects,
- *  - `ngx-toastr` defaults used by the auth effects.
+ * Wires up the `AUTH_*` configuration tokens and the NgRx `auth` feature
+ * state + effects. The library is headless — it ships no UI components and no
+ * notification provider; consumers attach their own login screen and react to
+ * `AuthActions.logInSuccess` / `logInFailure` etc. for user feedback.
  *
- * The **host application** remains responsible for providing the root
- * infrastructure that a library must not own:
- *  - `provideHttpClient(withInterceptors([tokenInterceptor]))` — register the
- *    auth token interceptor on your own `HttpClient` configuration,
- *  - `provideAnimations()` / `provideAnimationsAsync()`,
+ * The **host application** remains responsible for the root infrastructure:
+ *  - `provideHttpClient(withInterceptors([tokenInterceptor]))`,
  *  - `provideStore()` and root `provideEffects()`,
  *  - `provideRouter(...)`.
  *
@@ -36,7 +25,6 @@ import {
  * // app.config.ts
  * import { ApplicationConfig } from '@angular/core';
  * import { provideHttpClient, withInterceptors } from '@angular/common/http';
- * import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
  * import { provideStore } from '@ngrx/store';
  * import { provideEffects } from '@ngrx/effects';
  * import { provideAuth, tokenInterceptor } from 'angular-auth-lib';
@@ -46,28 +34,23 @@ import {
  *     provideStore(),
  *     provideEffects(),
  *     provideHttpClient(withInterceptors([tokenInterceptor])),
- *     provideAnimationsAsync(),
- *     provideAuth({
- *       urls: { ... },
- *       images: { ... }
- *     })
- *   ]
+ *     provideAuth<MyUser>({
+ *       urls: { accessTokenUrl: '/api/token', userInformationUrl: '/api/me' },
+ *       behavior: {
+ *         canActivate: (user, route) => !!user && user.roles.includes(route.data?.['role']),
+ *         redirectAfterLogin: () => '/dashboard',
+ *         loginRoute: 'signin',
+ *       },
+ *     }),
+ *   ],
  * };
  * ```
  */
-export function provideAuth(config: AuthModuleConfig): EnvironmentProviders {
+export function provideAuth<TUser = unknown>(config: AuthModuleConfig<TUser>): EnvironmentProviders {
   return makeEnvironmentProviders([
     { provide: AUTH_API_URLS, useValue: config.urls },
-    { provide: AUTH_IMAGES_URLS, useValue: config.images },
-    { provide: AUTH_TRADUCTIONS, useValue: config.traductions },
-    { provide: AUTH_RESET_ACTIONS, useValue: config.resetActions },
-    { provide: AUTH_STYLES, useValue: config.styles },
+    { provide: AUTH_BEHAVIOR, useValue: config.behavior },
     provideState(authFeature),
     provideEffects(AuthEffects),
-    provideToastr({
-      timeOut: 3000,
-      positionClass: 'toast-bottom-right',
-      preventDuplicates: true
-    })
   ]);
 }
