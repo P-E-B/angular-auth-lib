@@ -15,22 +15,25 @@ export class TokenInterceptor implements HttpInterceptor {
     @Inject(AUTH_API_URLS) apiUrls: AuthModuleConfig['urls']
   ) {
     for (const url of Object.values(apiUrls)) {
-      if (url) {
-        try {
-          this.allowedOrigins.add(new URL(url).origin);
-        } catch {
-          // Skip unparseable config entries; they add no trusted origin.
-        }
+      const origin = url ? this.parseOrigin(url) : null;
+      if (origin) {
+        this.allowedOrigins.add(origin);
       }
+    }
+  }
+
+  private parseOrigin(url: string, base?: string): string | null {
+    try {
+      return new URL(url, base).origin;
+    } catch {
+      return null;
     }
   }
 
   private isAllowedUrl(url: string): boolean {
     const baseOrigin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
-    let requestOrigin: string;
-    try {
-      requestOrigin = new URL(url, baseOrigin || undefined).origin;
-    } catch {
+    const requestOrigin = this.parseOrigin(url, baseOrigin || undefined);
+    if (!requestOrigin) {
       return false;
     }
     // Same-origin requests (including relative URLs) hit the app's own server,
