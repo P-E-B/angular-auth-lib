@@ -15,4 +15,3 @@ export * from './store/selectors';
 export * from './models/user.models';
 export * from './token';
 export * from './provide-auth';
-export * from './angular-auth-lib.module';

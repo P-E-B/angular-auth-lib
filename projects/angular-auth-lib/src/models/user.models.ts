@@ -1,6 +1,8 @@
 export interface Token {
   token: string;
   expiringDate: Date;
+  /** Optional long-lived refresh token returned alongside the access token. */
+  refreshToken?: string;
 }
 
 export interface BaseUser {

@@ -17,8 +17,6 @@ It contains:
   3. `SignUpComponent` — create an account (username, password, first/last name, email, optional enterprise). Opens as a Material dialog via the `OpenSignUpDialog` action.
   4. `ActivateUserComponent` — activate an account from an emailed code/link
 
-> Refresh-token support is not yet implemented — extend your access-token lifetime in the meantime.
-
 
 ## Repo
 
@@ -127,7 +125,8 @@ That's it — you have a login page, an auth store, a guard and a token intercep
 
 The library expects:
 
-* **`accessTokenUrl`** (POST) — response body must contain `{ "access": "<token>" }`
+* **`accessTokenUrl`** (POST) — response body must contain `{ "access": "<jwt>", "refresh"?: "<token>" }`
+* **`refreshTokenUrl`** (POST, optional) — body `{ "refresh": "<token>" }`, response `{ "access": "<jwt>", "refresh"?: "<token>" }`
 * **`userInformationUrl`** (GET) — response body must contain `{ "user": { ... } }`
 
 Each user object sent to the frontend must include:
@@ -199,10 +198,23 @@ export interface AuthModuleConfig {
 }
 ```
 
+### Refresh tokens (optional)
+
+Set `urls.refreshTokenUrl` to opt in. When the backend returns a `refresh` field on login, the library stores it in `sessionStorage` alongside the access token. From then on `tokenInterceptor` keeps the session alive transparently:
+
+* **Proactive** — before each request, if the JWT's `exp` is within 30 s the interceptor refreshes first, so the request goes out with a valid bearer.
+* **Reactive** — if the server still answers `401` (clock skew, early revocation), it refreshes and replays the original request once.
+
+Concurrent requests share a single in-flight refresh. If the refresh itself fails, `LogOut` is dispatched and the original error is re-thrown.
+
+You can also trigger a refresh imperatively with `store.dispatch(RefreshToken())` or `authService.refreshToken()`, and react to `RefreshTokenSuccess` / `RefreshTokenFailure` in your own effects.
+
+If `refreshTokenUrl` is omitted (or the backend doesn't send `refresh`), behaviour is unchanged from 1.0 — `401`s surface to the caller untouched.
+
 User model:
 
 ```ts
-export interface Token { token: string; expiringDate: Date; }
+export interface Token { token: string; expiringDate: Date; refreshToken?: string; }
 
 export interface BaseUser {
   id: number;
@@ -275,6 +287,7 @@ export class UserPageComponent {
 |---|---|
 | `LogIn` | `{ payload: Partial<User> }` |
 | `LogOut` | — |
+| `RefreshToken` | — |
 | `OpenSignUpDialog` | — |
 | `SignUp` | `{ payload: Partial<User> }` |
 | `SendActivationCode` | `{ payload: string }` |
@@ -290,11 +303,6 @@ Each has matching `…Success` / `…Failure` actions for effects you may want t
 **Selectors:** `selectAuthState`, `selectUser`, `selectIsAuthenticated`, `selectLogInError`, `selectIsLoginLoading`, `selectIsPasswordBeingChanged`, `selectIsSignUpLoading`, `selectIsSendActivationCodeLoading`, `selectIsUserCreated`, `selectIsActivated`, `selectUsersList`.
 
 
-## NgModule consumers
-
-`AuthModule.forRoot(config)` still exists (deprecated) and delegates to `provideAuth()`. You must still register `HttpClient`, animations and the token interceptor yourself.
-
-
 ## Migrating from 0.x
 
 | 0.x | 1.0 |
@@ -306,10 +314,15 @@ Each has matching `…Success` / `…Failure` actions for effects you may want t
 | `store.pipe(select(selectUser))` | `store.selectSignal(selectUser)` |
 | `resetActions: [ResetAppState]` (class) | `resetActions: [resetAppState]` (creator) |
 | `User[k]: any` | `User[k]: unknown` — cast custom fields |
-| Action type `'[Auth] User tries to log in'` | `'[Auth] Log In'` — match via `AUTH_ACTIONS_TYPE.*` |
+| Action type `'[Auth] User tries to log in'` | `'[Auth] Log In'` |
 
 
 ## Change log
+
+* **1.1.0**
+  * Refresh-token support — opt-in via `urls.refreshTokenUrl`; `tokenInterceptor` now refreshes-and-retries on `401`
+  * New `RefreshToken` / `RefreshTokenSuccess` / `RefreshTokenFailure` actions and `AuthService.refreshToken()`
+  * **BREAKING** removed APIs deprecated in 1.0: `AuthModule`, class `AuthGuard`, class `TokenInterceptor`, `AUTH_ACTIONS_TYPE`, `Actions` union, `authReducer` alias, `LogInComponent.isPasswordBeingChanged$` / `isLoginLoading$`
 
 * **1.0.0** — **BREAKING** Angular 20 rewrite
   * Standalone components, signals, `inject()`, `@if`/`@for` control flow, OnPush
