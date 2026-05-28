@@ -135,7 +135,10 @@ export class AuthEffects {
         sessionStorage.setItem('token', loggedInUser.token.token);
         return this.authService.getUserInformation().pipe(
           map(({ user, usersList }) => new LogInSuccess({ user, usersList })),
-          catchError((error: HttpErrorResponse) => of(new LogInFailure(error)))
+          catchError((error: HttpErrorResponse) => {
+            sessionStorage.removeItem('token');
+            return of(new LogInFailure(error));
+          })
         );
       }),
       catchError((error: HttpErrorResponse) => of(new LogInFailure(error)))
@@ -164,9 +167,14 @@ export class AuthEffects {
   @Effect({ dispatch: false })
   LogInFailure$ = this.actions.pipe(
     ofType(AUTH_ACTIONS_TYPE.LOG_IN_FAILURE),
-    tap((error: LogInFailure) => this.toastService.error(
-      get(this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')
-    ))
+    tap((error: LogInFailure) => {
+      if (isPlatformBrowser(this.platformId)) {
+        sessionStorage.removeItem('token');
+      }
+      this.toastService.error(
+        get(this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')
+      );
+    })
   );
 
   @Effect()
