@@ -9,11 +9,14 @@ import { AUTH_API_URLS, AuthModuleConfig } from '../token';
 export class TokenInterceptor implements HttpInterceptor {
 
   private readonly allowedOrigins = new Set<string>();
+  private readonly authService: AuthService;
 
   constructor(
-    private authService: AuthService,
+    authService: AuthService,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     @Inject(AUTH_API_URLS) apiUrls: AuthModuleConfig['urls']
   ) {
+    this.authService = authService;
     for (const url of Object.values(apiUrls)) {
       const origin = url ? this.parseOrigin(url) : null;
       if (origin) {
@@ -31,8 +34,8 @@ export class TokenInterceptor implements HttpInterceptor {
   }
 
   private isAllowedUrl(url: string): boolean {
-    const baseOrigin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
-    const requestOrigin = this.parseOrigin(url, baseOrigin || undefined);
+    const baseOrigin = window.location.origin;
+    const requestOrigin = this.parseOrigin(url, baseOrigin);
     if (!requestOrigin) {
       return false;
     }
@@ -43,6 +46,7 @@ export class TokenInterceptor implements HttpInterceptor {
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     const token = this.authService.getToken();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
     if (token && this.isAllowedUrl(request.url)) {
       request = request.clone({
         setHeaders: {
