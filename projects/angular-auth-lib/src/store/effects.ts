@@ -23,6 +23,9 @@ import {
   LogInSuccess,
   LogOut,
   OpenForgottenPasswordDialog,
+  RefreshToken,
+  RefreshTokenFailure,
+  RefreshTokenSuccess,
   OpenSignUpDialog,
   ResetAuthState,
   SendActivationCode,
@@ -154,11 +157,11 @@ export class AuthEffects {
       switchMap((user) =>
         this.authService.login(user as User).pipe(
           concatMap((loggedInUser: User) => {
-            sessionStorage.setItem('token', loggedInUser.token!.token);
+            this.authService.storeToken(loggedInUser.token!);
             return this.authService.getUserInformation().pipe(
               map(({ user, usersList }) => LogInSuccess({ payload: { user, usersList } })),
               catchError((error: HttpErrorResponse) => {
-                sessionStorage.removeItem('token');
+                this.authService.storeToken(null);
                 return of(LogInFailure({ payload: error }));
               })
             );
@@ -196,9 +199,7 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(LogInFailure),
         tap(() => {
-          if (isPlatformBrowser(this.platformId)) {
-            sessionStorage.removeItem('token');
-          }
+          this.authService.storeToken(null);
           this.toastService.error(
             get(this.traductions || {}, 'messages.loginFailure', 'Wrong credentials. Please check again.')
           );
@@ -212,10 +213,30 @@ export class AuthEffects {
       ofType(LogOut),
       filter(() => isPlatformBrowser(this.platformId)),
       switchMap(() => {
-        sessionStorage.removeItem('token');
+        this.authService.storeToken(null);
         this.router.navigate(['log-in']);
         return (this.resetActions || []).map((resetAction): Action => resetAction());
       })
+    )
+  );
+
+  RefreshToken$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(RefreshToken),
+      filter(() => this.authService.canRefresh),
+      switchMap(() =>
+        this.authService.refreshToken().pipe(
+          map((token) => RefreshTokenSuccess({ payload: token })),
+          catchError((error: HttpErrorResponse) => of(RefreshTokenFailure({ payload: error })))
+        )
+      )
+    )
+  );
+
+  RefreshTokenFailure$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(RefreshTokenFailure),
+      map(() => LogOut())
     )
   );
 

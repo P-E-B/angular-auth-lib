@@ -118,10 +118,3 @@ export const authFeature = createFeature({
         on(UserActions.ResetAuthState, (): AuthState => initialState)
     )
 });
-
-/**
- * Back-compat alias for the feature reducer.
- * Prefer registering {@link authFeature} via `StoreModule.forFeature(authFeature)`
- * or `provideState(authFeature)`.
- */
-export const { reducer: authReducer } = authFeature;

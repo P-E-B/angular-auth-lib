@@ -6,7 +6,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Store } from '@ngrx/store';
-import { Observable } from 'rxjs';
 
 import { get } from '../../utils';
 
@@ -39,11 +38,6 @@ export class LogInComponent {
   /** Reactive store state as signals (preferred for templates / OnPush). */
   readonly isPasswordBeingChanged: Signal<boolean> = this.store.selectSignal(selectIsPasswordBeingChanged);
   readonly isLoginLoading: Signal<boolean> = this.store.selectSignal(selectIsLoginLoading);
-
-  /** @deprecated Use the {@link isPasswordBeingChanged} signal instead. */
-  readonly isPasswordBeingChanged$: Observable<boolean> = this.store.select(selectIsPasswordBeingChanged);
-  /** @deprecated Use the {@link isLoginLoading} signal instead. */
-  readonly isLoginLoading$: Observable<boolean> = this.store.select(selectIsLoginLoading);
 
   /** Strictly-typed, non-nullable login form. */
   readonly userForm = inject(NonNullableFormBuilder).group({
