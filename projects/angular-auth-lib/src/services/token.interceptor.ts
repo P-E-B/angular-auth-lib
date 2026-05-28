@@ -6,8 +6,8 @@ import { Observable, catchError, switchMap, throwError } from 'rxjs';
 
 import { AuthService } from './auth.service';
 import { Token } from '../models/user.models';
-import { AUTH_API_URLS, AuthModuleConfig } from '../token';
-import { LogOut, RefreshTokenFailure, RefreshTokenSuccess } from '../store/actions';
+import { AUTH_API_URLS, AuthUrlsConfig } from '../token';
+import { AuthActions } from '../store/actions';
 
 /** Refresh proactively when the access token expires within this window. */
 const REFRESH_SKEW_MS = 30_000;
@@ -20,7 +20,7 @@ function parseOrigin(url: string, base?: string): string | null {
   }
 }
 
-function buildAllowedOrigins(apiUrls: AuthModuleConfig['urls']): Set<string> {
+function buildAllowedOrigins(apiUrls: AuthUrlsConfig): Set<string> {
   const allowed = new Set<string>();
   for (const url of Object.values(apiUrls)) {
     const origin = url ? parseOrigin(url) : null;
@@ -46,7 +46,7 @@ function withBearer<T>(request: HttpRequest<T>, token: string): HttpRequest<T> {
 }
 
 /** The login and refresh endpoints must never be retried by the refresh flow. */
-function isAuthEndpoint(url: string, apiUrls: AuthModuleConfig['urls']): boolean {
+function isAuthEndpoint(url: string, apiUrls: AuthUrlsConfig): boolean {
   return url === apiUrls.accessTokenUrl || (!!apiUrls.refreshTokenUrl && url === apiUrls.refreshTokenUrl);
 }
 
@@ -55,7 +55,7 @@ function handle(
   next: HttpHandlerFn,
   authService: AuthService,
   store: Store,
-  apiUrls: AuthModuleConfig['urls'],
+  apiUrls: AuthUrlsConfig,
   allowedOrigins: Set<string>,
   baseOrigin: string
 ): Observable<HttpEvent<unknown>> {
@@ -68,14 +68,14 @@ function handle(
   const refreshThen = (onFail: unknown) =>
     authService.refreshToken().pipe(
       switchMap((newToken) => {
-        store.dispatch(RefreshTokenSuccess({ payload: newToken }));
+        store.dispatch(AuthActions.refreshTokenSuccess({ payload: newToken }));
         return send(newToken);
       }),
       catchError((refreshError: unknown) => {
         const payload =
           refreshError instanceof HttpErrorResponse ? refreshError : (onFail as HttpErrorResponse);
-        store.dispatch(RefreshTokenFailure({ payload }));
-        store.dispatch(LogOut());
+        store.dispatch(AuthActions.refreshTokenFailure({ payload }));
+        store.dispatch(AuthActions.logOut());
         return throwError(() => onFail);
       })
     );
@@ -83,7 +83,7 @@ function handle(
   // Proactive: the JWT's `exp` is decoded into `token.expiringDate`; refresh
   // before sending if it's already inside the skew window. Saves the 401
   // round-trip in the common case.
-  if (refreshable && token && token.expiringDate.getTime() - Date.now() <= REFRESH_SKEW_MS) {
+  if (refreshable && token && token.expiringDate - Date.now() <= REFRESH_SKEW_MS) {
     return refreshThen(new HttpErrorResponse({ status: 401, statusText: 'Token expired' }));
   }
 

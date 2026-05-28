@@ -1,81 +1,53 @@
 import { InjectionToken } from '@angular/core';
-import type { Action } from '@ngrx/store';
+import type { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 
 /** API endpoint URLs consumed by {@link AuthService}. */
 export interface AuthUrlsConfig {
+  /** POST — exchanges credentials for `{ access, refresh? }`. */
   accessTokenUrl: string;
-  userInformationUrl: string;
-  sendBackPasswordUrl: string;
+  /** POST — exchanges `{ refresh }` for a fresh `{ access, refresh? }`. */
   refreshTokenUrl?: string;
-  changePasswordUrl?: string;
-  signUpUrl?: string;
-  sendActivationCodeUrl?: string;
-}
-
-/** Image asset URLs rendered by the auth components. */
-export interface AuthImagesConfig {
-  loginBackgroundImageUrl: string;
-  logoImageUrl: string;
-}
-
-/** Optional i18n strings for the auth components and toast messages. */
-export interface AuthTraductionsConfig {
-  dialogs?: {
-    signup?: string;
-  };
-  buttons?: {
-    login?: string;
-    send?: string;
-    passwordForgotten?: string;
-    signup?: string;
-    sendActivationCode?: string;
-  };
-  form?: {
-    usernamePlaceholder?: string;
-    passwordPlaceholder?: string;
-    emailPlaceholder?: string;
-    firstNamePlaceholder?: string;
-    lastNamePlaceholder?: string;
-    enterprisePlaceholder?: string;
-    activationCodePlaceholder?: string;
-  };
-  messages?: {
-    loginSuccess?: string;
-    loginFailure?: string;
-    signupSuccess?: string;
-    signupFailure?: string;
-    sendActivationCodeSuccess?: string;
-    sendActivationCodeFailure?: string;
-    passwordResetSuccess?: string;
-    passwordResetFailure?: string;
-    changePasswordSuccess?: string;
-    changePasswordFailure?: string;
-  };
-}
-
-/** Optional styling overrides for the auth components. */
-export interface AuthStylesConfig {
-  buttonsColor?: string;
-  buttonsBackgroundColor?: string;
+  /**
+   * GET — returns the authenticated user record. Optional: when omitted the
+   * login effect skips the fetch and `AuthState.user` stays `null`.
+   */
+  userInformationUrl?: string;
 }
 
 /**
- * Zero-argument NgRx action factories dispatched on `LogOut` to reset
- * downstream feature state. Typically `createAction()` / `createActionGroup`
- * creators. Consumed by `AuthEffects` as `resetAction()`.
+ * Application-supplied behaviour callbacks. The library treats the user record
+ * as opaque (`unknown`); these callbacks let the host app derive routing
+ * decisions from its own user shape.
+ *
+ * @typeParam TUser - The application's user type as returned by
+ *                    `userInformationUrl`.
  */
-export type AuthResetActions = Array<() => Action>;
-
-export interface AuthModuleConfig {
-  urls: AuthUrlsConfig;
-  images: AuthImagesConfig;
-  traductions?: AuthTraductionsConfig;
-  styles?: AuthStylesConfig;
-  resetActions?: AuthResetActions;
+export interface AuthBehaviorConfig<TUser = unknown> {
+  /**
+   * Route authorization predicate evaluated by {@link authGuard} for an
+   * authenticated user. **Required** — there is no permissive default; supply
+   * `() => true` explicitly if every authenticated user may access every
+   * guarded route.
+   */
+  canActivate: (user: TUser | null, route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => boolean;
+  /**
+   * URL to navigate to after a successful login when no `returnUrl` query
+   * parameter was set by the guard.
+   * @default `'/'`
+   */
+  redirectAfterLogin?: (user: TUser | null) => string;
+  /**
+   * Route the guard and the logout effect navigate to for unauthenticated
+   * access.
+   * @default `'log-in'`
+   */
+  loginRoute?: string;
 }
 
-export const AUTH_API_URLS = new InjectionToken<AuthModuleConfig['urls']>('Auth api related urls');
-export const AUTH_IMAGES_URLS = new InjectionToken<AuthModuleConfig['images']>('Images urls');
-export const AUTH_TRADUCTIONS = new InjectionToken<AuthModuleConfig['traductions']>('Traductions');
-export const AUTH_RESET_ACTIONS = new InjectionToken<AuthModuleConfig['resetActions']>('Reset actions');
-export const AUTH_STYLES = new InjectionToken<AuthModuleConfig['styles']>('Styling');
+export interface AuthModuleConfig<TUser = unknown> {
+  urls: AuthUrlsConfig;
+  behavior: AuthBehaviorConfig<TUser>;
+}
+
+export const AUTH_API_URLS = new InjectionToken<AuthUrlsConfig>('Auth api urls');
+export const AUTH_BEHAVIOR = new InjectionToken<AuthBehaviorConfig>('Auth behavior callbacks');

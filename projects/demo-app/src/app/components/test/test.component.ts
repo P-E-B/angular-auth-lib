@@ -1,23 +1,21 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
 import { Store } from '@ngrx/store';
-import { LogOut, OpenSignUpDialog } from 'angular-auth-lib';
+import { AuthActions, selectAuthUser } from 'angular-auth-lib';
+
+import type { DemoUser } from '../../app.config';
 
 @Component({
   selector: 'app-test',
   templateUrl: './test.component.html',
   styleUrl: './test.component.scss',
-  imports: [MatButtonModule],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TestComponent {
-  private store = inject(Store);
+  private readonly store = inject(Store);
+
+  readonly user = this.store.selectSignal(selectAuthUser<DemoUser>());
 
   logout(): void {
-    this.store.dispatch(LogOut());
-  }
-
-  signup(): void {
-    this.store.dispatch(OpenSignUpDialog());
+    this.store.dispatch(AuthActions.logOut());
   }
 }

@@ -1,20 +1,15 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { Observable, finalize, map, share, tap, throwError } from 'rxjs';
 
-import { User, Token } from '../models/user.models';
+import { Token } from '../models/user.models';
 import { AUTH_API_URLS } from '../token';
 
 interface AccessTokenResponse {
   access: string;
   /** Optional long-lived refresh token (e.g. SimpleJWT, oauth2). */
   refresh?: string;
-}
-
-interface UserInformationResponse {
-  user: User;
-  usersList: User[];
 }
 
 const ACCESS_TOKEN_KEY = 'token';
@@ -34,8 +29,7 @@ export class AuthService {
   public decodeToken(token: string, refreshToken?: string): Token {
     const tokenParts = token.split(/\./);
     const tokenDecoded = JSON.parse(globalThis.atob(tokenParts[1]));
-    const expiringDate = new Date(tokenDecoded.exp * 1000);
-    return { token, expiringDate, refreshToken };
+    return { token, expiringDate: tokenDecoded.exp * 1000, refreshToken };
   }
 
   public getToken(): Token | null {
@@ -71,9 +65,12 @@ export class AuthService {
     }
   }
 
-  private getAccessToken(user: User): Observable<Token> {
-    const body = { username: user.username, password: user.password };
-    return this.http.post<AccessTokenResponse>(this.apiUrls.accessTokenUrl, body).pipe(
+  /**
+   * Exchange credentials for an access (+ optional refresh) token. The body is
+   * posted verbatim — the library never inspects it.
+   */
+  public login(credentials: unknown): Observable<Token> {
+    return this.http.post<AccessTokenResponse>(this.apiUrls.accessTokenUrl, credentials).pipe(
       map((tokenData) => this.decodeToken(tokenData.access, tokenData.refresh))
     );
   }
@@ -103,38 +100,12 @@ export class AuthService {
     return this.inflightRefresh$;
   }
 
-  public login(user: User): Observable<User> {
-    return this.getAccessToken(user).pipe(
-      map((token: Token) => ({
-        ...user,
-        token
-      }))
-    );
-  }
-
-  public getUserInformation(): Observable<{ user: User; usersList: User[] }> {
-    return this.http.get<UserInformationResponse>(this.apiUrls.userInformationUrl).pipe(
-      map((result) => ({
-        usersList: result.usersList,
-        user: { ...result.user, dateJoined: new Date(result.user.dateJoined) }
-      }))
-    );
-  }
-
-  public changePassword(passwordChanges: { currentPassword: string; nextPassword: string }): Observable<unknown> {
-    return this.http.put<unknown>(this.apiUrls.changePasswordUrl!, passwordChanges);
-  }
-
-  public sendPassword(mail: string): Observable<unknown> {
-    return this.http.post<unknown>(this.apiUrls.sendBackPasswordUrl, { email: mail });
-  }
-
-  public sendActivationCode(activationCode: string): Observable<unknown> {
-    const params = new HttpParams().append('activationCode', activationCode);
-    return this.http.get<unknown>(this.apiUrls.sendActivationCodeUrl!, { params });
-  }
-
-  public createUser(user: User): Observable<unknown> {
-    return this.http.post<unknown>(this.apiUrls.signUpUrl!, user);
+  /**
+   * Fetch the authenticated user's record from `userInformationUrl`. The
+   * library treats the response body as opaque and stores it verbatim in the
+   * auth feature state; consumers retrieve it typed via `selectAuthUser<T>()`.
+   */
+  public getUserInformation<TUser = unknown>(): Observable<TUser> {
+    return this.http.get<TUser>(this.apiUrls.userInformationUrl!);
   }
 }
