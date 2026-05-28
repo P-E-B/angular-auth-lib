@@ -1,81 +1,79 @@
-import { Component, OnInit, Inject } from '@angular/core';
-import { MatDialogRef } from '@angular/material/dialog';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { select, Store } from '@ngrx/store';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { MatDialogRef, MatDialogTitle } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Store } from '@ngrx/store';
 
 import { get } from '../../utils';
 
 import { SignUp } from '../../store/actions';
-import { AuthState } from '../../store/reducer';
 import { selectIsSignUpLoading } from '../../store/selectors';
 import { User } from '../../models/user.models';
-import { AUTH_TRADUCTIONS, AuthModuleConfig, AUTH_STYLES } from '../../token';
+import { AUTH_STYLES, AUTH_TRADUCTIONS } from '../../token';
 
 @Component({
   selector: 'auth-lib-sign-up',
+  imports: [
+    ReactiveFormsModule,
+    MatDialogTitle,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './sign-up.component.html',
-  styleUrls: ['./sign-up.component.scss']
+  styleUrl: './sign-up.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SignUpComponent implements OnInit {
-  isSignUpLoading$ = this.store.pipe(select(selectIsSignUpLoading));
+export class SignUpComponent {
+  private readonly traductions = inject(AUTH_TRADUCTIONS) ?? {};
+  private readonly styles = inject(AUTH_STYLES) ?? {};
+  private readonly formBuilder = inject(NonNullableFormBuilder);
+  private readonly store = inject(Store);
 
-  userForm: FormGroup;
+  /** Public so consumers / effects can close the dialog through it. */
+  readonly dialogRef = inject<MatDialogRef<SignUpComponent>>(MatDialogRef);
 
-  usernamePlaceholder = 'Username';
-  passwordPlaceholder = 'Password';
-  firstNamePlaceholder = 'First name';
-  lastNamePlaceholder = 'Last name';
-  emailPlaceholder = 'Email';
-  enterprisePlaceholder = 'Enterprise';
+  /** Loading flag from the auth store as a signal (NgRx 20 selectSignal). */
+  readonly isSignUpLoading = this.store.selectSignal(selectIsSignUpLoading);
 
-  signUpDialogTitle = 'Sign Up';
+  readonly userForm = this.formBuilder.group({
+    username: ['', Validators.required],
+    password: ['', Validators.required],
+    firstName: ['', Validators.required],
+    lastName: ['', Validators.required],
+    email: ['', Validators.required],
+    enterprise: ''
+  });
 
-  signupButtonTraduction = 'Log in';
-  buttonsBackgroundColor = '#3f51b5';
-  buttonsColor = 'white';
+  // ---- i18n / styling (config-derived constants, resolved once at construction) ----
+  usernamePlaceholder = get(this.traductions, 'form.usernamePlaceholder', 'Username');
+  passwordPlaceholder = get(this.traductions, 'form.passwordPlaceholder', 'Password');
+  firstNamePlaceholder = get(this.traductions, 'form.firstNamePlaceholder', 'First name');
+  lastNamePlaceholder = get(this.traductions, 'form.lastNamePlaceholder', 'Last name');
+  emailPlaceholder = get(this.traductions, 'form.emailPlaceholder', 'Email');
+  enterprisePlaceholder = get(this.traductions, 'form.enterprisePlaceholder', 'Enterprise');
 
-  constructor(
-    @Inject(AUTH_TRADUCTIONS) private traductions: AuthModuleConfig['traductions'],
-    @Inject(AUTH_STYLES) private styles: AuthModuleConfig['styles'],
-    public dialogRef: MatDialogRef<SignUpComponent>,
-    private formBuilder: FormBuilder,
-    private store: Store<AuthState>
-  ) { }
+  signUpDialogTitle = get(this.traductions, 'dialogs.signup', 'Sign Up');
+  signupButtonTraduction = get(this.traductions, 'buttons.signup', 'Log in');
 
-  ngOnInit() {
-    this.usernamePlaceholder = get(this.traductions || {}, 'form.usernamePlaceholder', this.usernamePlaceholder);
-    this.passwordPlaceholder = get(this.traductions || {}, 'form.passwordPlaceholder', this.passwordPlaceholder);
-    this.firstNamePlaceholder = get(this.traductions || {}, 'form.firstNamePlaceholder', this.firstNamePlaceholder);
-    this.lastNamePlaceholder = get(this.traductions || {}, 'form.lastNamePlaceholder', this.lastNamePlaceholder);
-    this.emailPlaceholder = get(this.traductions || {}, 'form.emailPlaceholder', this.emailPlaceholder);
-    this.enterprisePlaceholder = get(this.traductions || {}, 'form.enterprisePlaceholder', this.enterprisePlaceholder);
+  buttonsBackgroundColor = get(this.styles, 'buttonsBackgroundColor', '#3f51b5');
+  buttonsColor = get(this.styles, 'buttonsColor', 'white');
 
-    this.signUpDialogTitle = get(this.traductions || {}, 'dialogs.signup', this.signUpDialogTitle);
-    this.signupButtonTraduction = get(this.traductions || {}, 'buttons.signup', this.signupButtonTraduction);
-
-    this.buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
-    this.buttonsColor = get(this.styles || {}, 'buttonsColor', this.buttonsColor);
-
-    this.userForm = this.formBuilder.group({
-      username: ['', Validators.required],
-      password: ['', Validators.required],
-      firstName: ['', Validators.required],
-      lastName: ['', Validators.required],
-      email: ['', Validators.required],
-      enterprise: ''
-    });
-  }
-
-  onSubmitUser() {
+  onSubmitUser(): void {
+    const value = this.userForm.getRawValue();
     const newUser: Partial<User> = {
-      username: this.userForm.value['username'],
-      password: this.userForm.value['password'],
-      firstName: this.userForm.value['firstName'],
-      lastName: this.userForm.value['lastName'],
-      email: this.userForm.value['email'],
-      enterprise: this.userForm.value['enterprise'] || null,
+      username: value.username,
+      password: value.password,
+      firstName: value.firstName,
+      lastName: value.lastName,
+      email: value.email,
+      enterprise: value.enterprise || null,
       isActivated: false
     };
-    this.store.dispatch(new SignUp(newUser));
+    this.store.dispatch(SignUp({ payload: newUser }));
   }
 }

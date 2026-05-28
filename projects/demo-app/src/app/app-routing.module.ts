@@ -1,17 +1,7 @@
-import { NgModule } from '@angular/core';
-import { Routes, RouterModule } from '@angular/router';
-import { LogInComponent, AuthGuard, ActivateUserComponent } from 'angular-auth-lib';
-import { TestComponent } from './components/test/test.component';
-
-
-const routes: Routes = [
-  { path: '', component: TestComponent, pathMatch: 'full' },
-  { path: 'log-in', component: LogInComponent },
-  { path: 'activation/:activationCode', component: ActivateUserComponent },
-];
-
-@NgModule({
-  imports: [RouterModule.forRoot(routes)],
-  exports: [RouterModule]
-})
-export class AppRoutingModule { }
+/**
+ * @deprecated The demo app now uses standalone bootstrap with `provideRouter`.
+ * Route definitions moved to `./app.routes`. Import `routes` from there.
+ *
+ * The `AppRoutingModule` NgModule has been removed.
+ */
+export { routes } from './app.routes';

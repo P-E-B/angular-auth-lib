@@ -1,294 +1,333 @@
 # Angular Auth Library
 
-The purpose of this library is to refactor all code necessary to implement a basic authentication feature in an Angular project powered by NgRx (actions, reducer, effects and selectors).
-**The library needs less than 10 minutes to be implemented**. Start the clock now and let's get started!
+Drop-in authentication for **Angular 20+** apps backed by **NgRx**, **RxJS** and **Angular Material** — login, sign-up, password reset and account activation, with a fully wired store (actions, reducer, effects, selectors), a route guard and an HTTP token interceptor.
+
+Ships as **standalone components** with a single `provideAuth()` entry point. Set up in under 10 minutes.
 
 It contains:
-* a service
-* an auth guard
-* a token interceptor
-* a basic user model you can extend in your application
-* a store powered by NgRx (actions, reducer, effects and selectors)
-* four components: 
-  1. `LogInComponent` which allows users to login
-  2. `ForgottenPasswordComponent` which allows users to get new passwords
-  3. `SignUpComponent` which allows users to create an account with basic fields (username, password, first name, last name, email, enterprise). The field enterprise is not required. Please note that `SignUpComponent` is implemented as a dialog. So user just has to click on a button dispatching the action `OpenSignUpDialog` to access the signup form. 
-  You are free to code your own `SignUpComponent` without going with a dialog.
-  4. `ActivateUserComponent` which allows users to activate their account: they click on a link you generated in the signup email to activate / validate their account
 
-P.S.: Refresh token feature is not yet implemented. In the meantime, increase the duration of the access token life.
+* `AuthService`
+* `authGuard` (functional `CanActivateFn`)
+* `tokenInterceptor` (functional `HttpInterceptorFn`)
+* a `User` model you can extend
+* an NgRx feature (`authFeature`, actions, effects, selectors)
+* four standalone components:
+  1. `LogInComponent` — login form
+  2. `ForgottenPasswordComponent` — request a new password
+  3. `SignUpComponent` — create an account (username, password, first/last name, email, optional enterprise). Opens as a Material dialog via the `OpenSignUpDialog` action.
+  4. `ActivateUserComponent` — activate an account from an emailed code/link
+
+> Refresh-token support is not yet implemented — extend your access-token lifetime in the meantime.
 
 
 ## Repo
 
-Source code is available at: https://github.com/P-E-B/angular-auth-lib.git
-
-
-## Change log
-
-* **0.0.16**: SignUpSuccess does not close the dialog anymore
-* **0.0.16**: Adding support for activation code to better control sign-ups
-* **0.0.15**: Removing lodash-es
-* **0.0.14**: Removing lodash and putting instead lodash-es for tree shaking
-* **0.0.13**: Adding isLoading selector
-* **0.0.12**: Adding UpdateUser action to manage user in real time
-* **0.0.11**: Adding BaseUser interface and User is now extending it
-* **0.0.10**: Adding support for SSR
-* **0.0.9**: Adding `isSignUpLoading` selector
-* **0.0.8**: Improving README.md
-* **0.0.7**: Improving README.md and `auth.service.ts`
-* **0.0.6**: Improving README.md
-* **0.0.5**: Adding `SignUpComponent`
-* **0.0.4**: [**BREAKING CHANGE**] Adding more flexibility for customization. `AuthModuleConfig` has been modified
-* **0.0.3**: Improving README.md
-* **0.0.2**: Improving README.md
-* **0.0.1**: Initial commit
+Source code: <https://github.com/P-E-B/angular-auth-lib.git>
 
 
 ## Installation
 
-Install the library: `npm i angular-auth-lib`.
-
-Install the peer dependencies. NPM will print them on your screen. You can also find them in the library `package.json` file.
-
-Now begin the coding implementation as described below.
-
-
-## Quickstart (Go to next section - Documentation and configuration - to get more information)
-
-I will suppose here that you have:
-* an Angular 9 project running with full NgRx store (actions, effects, selectors and reducer). **Effects are required** since the library uses this great feature.
-* the library and its dependencies installed
-* a back-end implementing the required routes and sending the required information to the front-end (please refer to **Documentation and configuration section**)
-
-### Learn required parameters to pass to AuthModule
-
-The AuthModule **requires** the following parameters (please refer to its interface to see the other options):
-1. **REQUIRED** `accessTokenUrl`: the back-end url to retrieve an access token (JWT for example). **The response body must have a key called `access`containing the `token`**
-2. **REQUIRED** `sendBackPasswordUrl`: the back-end url to send a new password back to the user via a SMTP server (via mail)
-3. **REQUIRED** `loginBackgroundImageUrl`: the url to retrieve the background-image of the login page
-4. **REQUIRED** `logoImageUrl`: the url to retrieve your logo and print it on the login page
-5. **REQUIRED** `userInformationUrl`: the back-end url to retrieve information of the user (username, first name, etc.). **The response body must have a key called `user`containing the user properties**
-
-For the module to work as expected, each user sent to the frontend must have basic properties including:
-* **REQUIRED** `token` when login is successful
-* **REQUIRED** `redirectUrlAfterLogin` to tell the router where to route the user after successful login
-* **REQUIRED** `allowedUrls` to let the Guard (if implemented) know if the desired url is allowed. Obviously, ensure permissions on the backend are well set as well
-
-Here is an example of a user who can access `'home'` and will be redirected to it after successful login:
-
-```json
-{
-	"id" : 1,
-	"username" : "paul",
-	"allowedUrls" : [
-		"home"
-	],
-	"dateJoined" : "2020-04-27T00:26:59.482740+02:00",
-	"email" : "paul.emile.brotons@gmail.com",
-	"enterprise" : "MongoDB",
-	"firstName" : "Paul-Emile",
-	"lastName" : "Brotons",
-	"passwordHash" : "azerty",
-  "redirectUrlAfterLogin" : "home",
-  "isActivated" : true
-}
+```sh
+npm i angular-auth-lib
+npm i @angular/material @angular/cdk @ngrx/store @ngrx/effects ngx-toastr
 ```
 
-### Set up the AuthModule in your Root NgModule
-For a basic configuration, add the `AuthModule` under your `StoreModule` and `EffectsModule` in the **imports** array section of your Root NgModule. You may have to turn off the runtime checks of the `StoreModule`.
+
+## Quickstart
+
+You'll need:
+
+* an Angular 20 standalone app with NgRx (`provideStore()` + `provideEffects()`)
+* a backend implementing the auth endpoints (see **Configuration** below)
+
+### 1. Register `provideAuth()` in your app config
 
 ```ts
-...
-StoreModule.forRoot({...}),
-EffectsModule.forRoot([...]),
-...
-/* fill the required urls below */
-AuthModule.forRoot({
-  urls: {
-    accessTokenUrl: <accessTokenUrl>,
-    userInformationUrl: <userInformationUrl>,
-    changePasswordUrl: <changePasswordUrl>,
-    sendBackPasswordUrl: <sendBackPasswordUrl>,
-    signUpUrl: <signUpUrl>
-  },
-  images: {
-    loginBackgroundImageUrl: <loginBackgroundImageUrl>,
-    logoImageUrl: <logoImageUrl>
-  }
-})
+// app.config.ts
+import { ApplicationConfig } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideStore } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { provideAuth, tokenInterceptor } from 'angular-auth-lib';
+
+import { routes } from './app.routes';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideRouter(routes),
+    provideStore(),
+    provideEffects(),
+    provideHttpClient(withInterceptors([tokenInterceptor])),
+    provideAnimationsAsync(),
+    provideAuth({
+      urls: {
+        accessTokenUrl: '/api/log-in',
+        userInformationUrl: '/api/user-information',
+        sendBackPasswordUrl: '/api/user-management',
+        changePasswordUrl: '/api/user-management',
+        signUpUrl: '/api/sign-up',
+        sendActivationCodeUrl: '/api/activation',
+      },
+      images: {
+        loginBackgroundImageUrl: 'assets/login-bg.jpg',
+        logoImageUrl: 'assets/logo.png',
+      },
+    }),
+  ],
+};
 ```
 
-### Register the LogInComponent into your routing Module
+```ts
+// main.ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app/app.component';
+import { appConfig } from './app/app.config';
 
-You can now add `LogInComponent` in the routing. Please specify a path of `'log-in'`.
+bootstrapApplication(AppComponent, appConfig).catch(err => console.error(err));
+```
 
-Use `AuthGuard` to prevent access to unauthorized components. Here is an example:
+### 2. Add routes and guard
+
+> ⚠️ The login route **must** use the path `'log-in'` — the guard and effects redirect to it by that literal.
 
 ```ts
-import { LogInComponent, AuthGuard } from 'angular-auth-lib';
+// app.routes.ts
+import { Routes } from '@angular/router';
+import { LogInComponent, ActivateUserComponent, authGuard } from 'angular-auth-lib';
 
-const appRoutes: Routes = [
-    { path: '', component: HomePageComponent, pathMatch: 'full' },
-    { path: 'log-in', component: LogInComponent }, // path must be equal to 'log-in'
-    { path: 'example', canActivate: [AuthGuard], component: ExampleComponent },
-    ...
-    { path: '**', redirectTo: '' }
+export const routes: Routes = [
+  { path: '', component: HomePageComponent, pathMatch: 'full' },
+  { path: 'log-in', component: LogInComponent },
+  { path: 'activate', component: ActivateUserComponent },
+  { path: 'example', canActivate: [authGuard], component: ExampleComponent },
+  { path: '**', redirectTo: '' },
 ];
 ```
 
-### Add the following lines to your project root styles.scss
+### 3. Global styles
 
 ```scss
-// material style
+// styles.scss
+@use '@angular/material/prebuilt-themes/azure-blue.css';
+@use 'ngx-toastr/toastr';
+
 @import url('https://fonts.googleapis.com/css?family=Roboto:400,700|Material+Icons');
-@import "~@angular/material/prebuilt-themes/indigo-pink.css";
-// regular style toast
-@import '~ngx-toastr/toastr.css';
+
+#toast-container > div { opacity: 1; }
+button:focus { outline: none; }
+body { margin: 0; }
+```
+
+That's it — you have a login page, an auth store, a guard and a token interceptor.
 
 
-#toast-container > div {
-    opacity: 1;
-}
+## Backend contract
 
- button:focus {
-    outline: none;
-}
+The library expects:
 
-body {
-    margin: 0;
+* **`accessTokenUrl`** (POST) — response body must contain `{ "access": "<token>" }`
+* **`userInformationUrl`** (GET) — response body must contain `{ "user": { ... } }`
+
+Each user object sent to the frontend must include:
+
+* `token` — when login succeeds
+* `redirectUrlAfterLogin` — where the router sends the user after login
+* `allowedUrls` — paths the guard will permit (enforce permissions on the backend too)
+
+```json
+{
+  "id": 1,
+  "username": "paul",
+  "allowedUrls": ["home"],
+  "dateJoined": "2020-04-27T00:26:59.482740+02:00",
+  "email": "paul.emile.brotons@gmail.com",
+  "enterprise": "MongoDB",
+  "firstName": "Paul-Emile",
+  "lastName": "Brotons",
+  "redirectUrlAfterLogin": "home",
+  "isActivated": true
 }
 ```
 
-And that's it! Your application now has a basic authentication mechanism: a store to feed all your components with user data, a login page
 
+## Configuration
 
-## Documentation and configuration
-
-### Interfaces of the library
-
-See below all the parameters you can pass to the `AuthModule` in order to customize it:
+Full `AuthModuleConfig`:
 
 ```ts
 export interface AuthModuleConfig {
-    urls: {
-      accessTokenUrl: string;
-      userInformationUrl: string;
-      sendBackPasswordUrl: string;
-      refreshTokenUrl?: string;
-      changePasswordUrl?: string;  // the back-end url to change password (it will require a UserPageComponent)
-      signUpUrl?: string;  // the back-end url to sign up for a new user
-      sendActivationCodeUrl?: string; // the back-end url to activate a user
+  urls: {
+    accessTokenUrl: string;
+    userInformationUrl: string;
+    sendBackPasswordUrl: string;
+    refreshTokenUrl?: string;
+    changePasswordUrl?: string;
+    signUpUrl?: string;
+    sendActivationCodeUrl?: string;
+  };
+  images: {
+    loginBackgroundImageUrl: string;
+    logoImageUrl: string;
+  };
+  traductions?: {
+    dialogs?: { signup?: string };
+    buttons?: {
+      login?: string; send?: string; passwordForgotten?: string;
+      signup?: string; sendActivationCode?: string;
     };
-    images: {
-      loginBackgroundImageUrl: string;
-      logoImageUrl: string;
+    form?: {
+      usernamePlaceholder?: string; passwordPlaceholder?: string;
+      emailPlaceholder?: string; firstNamePlaceholder?: string;
+      lastNamePlaceholder?: string; enterprisePlaceholder?: string;
+      activationCodePlaceholder?: string;
     };
-    traductions?: {
-      dialogs?: {
-        signup?: string; // defaults to 'Sign Up'
-      },
-      buttons?: {
-        login?: string; // defaults to 'Log in'
-        send?: string; // defaults to 'Send'
-        passwordForgotten?: string; // defaults to 'Forgot your password?'
-        signup?: string; // defaults to 'Send'
-        sendActivationCode?: string; // defaults to 'Send'
-      }
-      form?: {
-        usernamePlaceholder?: string; // defaults to 'Username'
-        passwordPlaceholder?: string; // defaults to 'Password'
-        emailPlaceholder?: string; // defaults to 'Your email'
-        firstNamePlaceholder?: string; // defaults to 'First name'
-        lastNamePlaceholder?: string; // defaults to 'Last name'
-        enterprisePlaceholder?: string; // defaults to 'Enterprise'
-        activationCodePlaceholder?: string; // defaults to 'Enter your activation code'
-      },
-      messages?: {
-        loginSuccess?: string; // defaults to 'Hi! Nice to see you again!'
-        loginFailure?: string; // defaults to 'Wrong credentials. Please check again.'
-        signupSuccess?: string; // defaults to 'Your account has been created!'
-        signupFailure?: string; // defaults to 'Please try again.'
-        sendActivationCodeSuccess?: string; // defaults to 'Your account has been verified!'
-        sendActivationCodeFailure?: string; // defaults to 'Please try again with the correct code.'
-        passwordResetSuccess?: string; // defaults to 'An email for resetting your password has been sent to your address.'
-        passwordResetFailure?: string; // defaults to 'An error occured. Please try again.'
-        changePasswordSuccess?: string; // defaults to 'Your password has been successfully changed!'
-        changePasswordFailure?: string; // defaults to 'Wrong current password. Please try again.'
-      }
+    messages?: {
+      loginSuccess?: string; loginFailure?: string;
+      signupSuccess?: string; signupFailure?: string;
+      sendActivationCodeSuccess?: string; sendActivationCodeFailure?: string;
+      passwordResetSuccess?: string; passwordResetFailure?: string;
+      changePasswordSuccess?: string; changePasswordFailure?: string;
     };
-    styles?: {
-        buttonsColor?: string; // defaults to 'white'
-        buttonsBackgroundColor?: string; // defaults to '#3f51b5'
-    };
-    resetActions?: any[]; // a list of actions to clean your store when users log out, defaults to empty array
+  };
+  styles?: {
+    buttonsColor?: string;            // default 'white'
+    buttonsBackgroundColor?: string;  // default '#3f51b5'
+  };
+  resetActions?: Array<() => Action>; // dispatched on logout to clear other slices
 }
 ```
 
-You will find here the `User` interface, with all the fields needed by the library.
+User model:
+
 ```ts
-export interface Token {
-    token: string;
-    expiringDate: Date;
-}
+export interface Token { token: string; expiringDate: Date; }
 
 export interface BaseUser {
-    id: number;
-    username?: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    enterprise?: string;
-    dateJoined: Date;
-    redirectUrlAfterLogin: string;
-    allowedUrls: string[];
-    isActivated: boolean;
-    token?: Token;
-    password?: string; // only when user sends its password to the backend for login. This should not be present afterwards.
+  id: number;
+  username?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  enterprise?: string | null;
+  dateJoined: Date;
+  redirectUrlAfterLogin: string;
+  allowedUrls: string[];
+  isActivated: boolean;
+  token?: Token;
+  password?: string; // only present on the login request
 }
 
-export interface User extends BaseUser { // to be used by your application when needed
-    [attribute: string]: any;
+export interface User extends BaseUser {
+  [attribute: string]: unknown; // extend with your own backend fields
 }
 ```
 
-### Use the store to feed the rest of your application - Example use case
 
-Below is an example of a simple component used for printing user information and **allowing user to change its password**.
+## Using the store in your components
+
+Read state with `selectSignal`, dispatch with action creators:
 
 ```ts
-import { Component, OnInit } from '@angular/core';
-import { Store, select } from '@ngrx/store';
-import { AppState } from 'src/app/app.state';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { Store } from '@ngrx/store';
 import { selectUser, selectIsPasswordBeingChanged, ChangePassword } from 'angular-auth-lib';
-import { FormGroup, FormBuilder } from '@angular/forms';
 
 @Component({
   selector: 'app-user-page',
+  imports: [ReactiveFormsModule],
   templateUrl: './user-page.component.html',
-  styleUrls: ['./user-page.component.scss']
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UserPageComponent implements OnInit {
-  user$ = this.store.pipe(select(selectUser));
-  isPasswordBeingChanged$ = this.store.pipe(select(selectIsPasswordBeingChanged)); // typical use case for a spinner
-  userForm: FormGroup;
+export class UserPageComponent {
+  private store = inject(Store);
+  private fb = inject(FormBuilder);
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private store: Store<AppState>,
-    private router: Router
-  ) { }
+  user = this.store.selectSignal(selectUser);
+  isPasswordBeingChanged = this.store.selectSignal(selectIsPasswordBeingChanged);
 
-  ngOnInit() {
-    this.userForm = this.formBuilder.group({
-      currentPassword: '',
-      nextPassword: ''
-    });
-  }
+  userForm = this.fb.nonNullable.group({ currentPassword: '', nextPassword: '' });
 
   resetPassword() {
-    this.store.dispatch(new ChangePassword(this.userForm.value)); // ChangePassword expects a payload of type { currentPassword: string, nextPassword: string }
+    this.store.dispatch(ChangePassword({ payload: this.userForm.getRawValue() }));
     this.userForm.reset();
   }
 }
 ```
+
+```html
+@if (user(); as u) {
+  <h2>Hello {{ u.firstName }}</h2>
+}
+@if (isPasswordBeingChanged()) {
+  <mat-progress-spinner mode="indeterminate" />
+}
+```
+
+
+## Actions & selectors
+
+**Actions** (also available grouped as `AuthActions.*`):
+
+| Action | Payload |
+|---|---|
+| `LogIn` | `{ payload: Partial<User> }` |
+| `LogOut` | — |
+| `OpenSignUpDialog` | — |
+| `SignUp` | `{ payload: Partial<User> }` |
+| `SendActivationCode` | `{ payload: string }` |
+| `ChangePassword` | `{ payload: { currentPassword: string; nextPassword: string } }` |
+| `OpenForgottenPasswordDialog` | — |
+| `SendPassword` | `{ payload: string }` |
+| `UpdateUser` | `{ payload: Partial<User> }` |
+| `LoadUserInformation` | — |
+| `ResetAuthState` | — |
+
+Each has matching `…Success` / `…Failure` actions for effects you may want to react to.
+
+**Selectors:** `selectAuthState`, `selectUser`, `selectIsAuthenticated`, `selectLogInError`, `selectIsLoginLoading`, `selectIsPasswordBeingChanged`, `selectIsSignUpLoading`, `selectIsSendActivationCodeLoading`, `selectIsUserCreated`, `selectIsActivated`, `selectUsersList`.
+
+
+## NgModule consumers
+
+`AuthModule.forRoot(config)` still exists (deprecated) and delegates to `provideAuth()`. You must still register `HttpClient`, animations and the token interceptor yourself.
+
+
+## Migrating from 0.x
+
+| 0.x | 1.0 |
+|---|---|
+| `AuthModule.forRoot(cfg)` in `imports` | `provideAuth(cfg)` in `providers` |
+| `canActivate: [AuthGuard]` | `canActivate: [authGuard]` |
+| `HTTP_INTERCEPTORS` → `TokenInterceptor` | `provideHttpClient(withInterceptors([tokenInterceptor]))` |
+| `store.dispatch(new LogIn(user))` | `store.dispatch(LogIn({ payload: user }))` |
+| `store.pipe(select(selectUser))` | `store.selectSignal(selectUser)` |
+| `resetActions: [ResetAppState]` (class) | `resetActions: [resetAppState]` (creator) |
+| `User[k]: any` | `User[k]: unknown` — cast custom fields |
+| Action type `'[Auth] User tries to log in'` | `'[Auth] Log In'` — match via `AUTH_ACTIONS_TYPE.*` |
+
+
+## Change log
+
+* **1.0.0** — **BREAKING** Angular 20 rewrite
+  * Standalone components, signals, `inject()`, `@if`/`@for` control flow, OnPush
+  * New `provideAuth(config)` entry point for `bootstrapApplication`
+  * Functional `authGuard` / `tokenInterceptor` (class versions kept, deprecated)
+  * NgRx 20: `createActionGroup`, `createFeature` — actions are now **creator functions**, not classes (`LogIn({ payload })` instead of `new LogIn(payload)`)
+  * Library no longer bundles `HttpClientModule` / `BrowserAnimationsModule` — host app provides them
+  * Strict types: `User[k]` is `unknown`, `AuthState` fields are nullable
+  * Peer deps: Angular `^20`, NgRx `^20`, RxJS `^7`, ngx-toastr `^19`
+
+* **0.0.16** — `SignUpSuccess` no longer closes the dialog; activation-code support
+* **0.0.15** — Removed lodash-es
+* **0.0.14** — lodash → lodash-es for tree-shaking
+* **0.0.13** — `isLoading` selector
+* **0.0.12** — `UpdateUser` action
+* **0.0.11** — `BaseUser` interface
+* **0.0.10** — SSR support
+* **0.0.9** — `isSignUpLoading` selector
+* **0.0.5** — `SignUpComponent`
+* **0.0.4** — [BREAKING] `AuthModuleConfig` reshaped
+* **0.0.1** — Initial release

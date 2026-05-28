@@ -1,66 +1,71 @@
-import { Component, OnInit, Inject } from '@angular/core';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Store, select } from '@ngrx/store';
+import { ChangeDetectionStrategy, Component, inject, Signal } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Store } from '@ngrx/store';
+import { Observable } from 'rxjs';
 
 import { get } from '../../utils';
 
 import { User } from '../../models/user.models';
-import { AuthState } from '../../store/reducer';
-import { OpenForgottenPasswordDialog, LogIn } from '../../store/actions';
-import { selectIsPasswordBeingChanged, selectIsLoginLoading } from '../../store/selectors';
-import { AUTH_IMAGES_URLS, AuthModuleConfig, AUTH_TRADUCTIONS, AUTH_STYLES } from '../../token';
+import { LogIn, OpenForgottenPasswordDialog } from '../../store/actions';
+import { selectIsLoginLoading, selectIsPasswordBeingChanged } from '../../store/selectors';
+import { AUTH_IMAGES_URLS, AUTH_STYLES, AUTH_TRADUCTIONS, AuthModuleConfig } from '../../token';
 
 @Component({
   selector: 'auth-lib-log-in',
   templateUrl: './log-in.component.html',
-  styleUrls: ['./log-in.component.scss']
+  styleUrl: './log-in.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    ReactiveFormsModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatProgressSpinnerModule
+  ]
 })
-export class LogInComponent implements OnInit {
-  isPasswordBeingChanged$ = this.store.pipe(select(selectIsPasswordBeingChanged));
-  isLoginLoading$ = this.store.pipe(select(selectIsLoginLoading));
-  userForm: FormGroup;
+export class LogInComponent {
+  private readonly store = inject(Store);
+  private readonly traductions: AuthModuleConfig['traductions'] = inject(AUTH_TRADUCTIONS);
+  private readonly styles: AuthModuleConfig['styles'] = inject(AUTH_STYLES);
 
-  usernamePlaceholder = 'Username';
-  passwordPlaceholder = 'Password';
-  forgottenPassword = 'Forgot your password?';
+  readonly images: AuthModuleConfig['images'] = inject(AUTH_IMAGES_URLS);
 
-  loginButtonTraduction = 'Log in';
-  buttonsBackgroundColor = '#3f51b5';
-  buttonsColor = 'white';
+  /** Reactive store state as signals (preferred for templates / OnPush). */
+  readonly isPasswordBeingChanged: Signal<boolean> = this.store.selectSignal(selectIsPasswordBeingChanged);
+  readonly isLoginLoading: Signal<boolean> = this.store.selectSignal(selectIsLoginLoading);
 
-  constructor(
-    @Inject(AUTH_IMAGES_URLS) public images: AuthModuleConfig['images'],
-    @Inject(AUTH_TRADUCTIONS) private traductions: AuthModuleConfig['traductions'],
-    @Inject(AUTH_STYLES) private styles: AuthModuleConfig['styles'],
-    private formBuilder: FormBuilder,
-    private store: Store<AuthState>
-  ) {
+  /** @deprecated Use the {@link isPasswordBeingChanged} signal instead. */
+  readonly isPasswordBeingChanged$: Observable<boolean> = this.store.select(selectIsPasswordBeingChanged);
+  /** @deprecated Use the {@link isLoginLoading} signal instead. */
+  readonly isLoginLoading$: Observable<boolean> = this.store.select(selectIsLoginLoading);
+
+  /** Strictly-typed, non-nullable login form. */
+  readonly userForm = inject(NonNullableFormBuilder).group({
+    username: ['', Validators.required],
+    password: ['', Validators.required]
+  });
+
+  usernamePlaceholder = get(this.traductions || {}, 'form.usernamePlaceholder', 'Username');
+  passwordPlaceholder = get(this.traductions || {}, 'form.passwordPlaceholder', 'Password');
+  forgottenPassword = get(this.traductions || {}, 'buttons.passwordForgotten', 'Forgot your password?');
+  loginButtonTraduction = get(this.traductions || {}, 'buttons.login', 'Log in');
+
+  buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', '#3f51b5');
+  buttonsColor = get(this.styles || {}, 'buttonsColor', 'white');
+
+  openDialog(): void {
+    this.store.dispatch(OpenForgottenPasswordDialog());
   }
 
-  ngOnInit() {
-    this.usernamePlaceholder = get(this.traductions || {}, 'form.usernamePlaceholder', this.usernamePlaceholder);
-    this.passwordPlaceholder = get(this.traductions || {}, 'form.passwordPlaceholder', this.passwordPlaceholder);
-    this.forgottenPassword = get(this.traductions || {}, 'buttons.passwordForgotten', this.forgottenPassword);
-
-    this.loginButtonTraduction = get(this.traductions || {}, 'buttons.login', this.loginButtonTraduction);
-    this.buttonsBackgroundColor = get(this.styles || {}, 'buttonsBackgroundColor', this.buttonsBackgroundColor);
-    this.buttonsColor = get(this.styles || {}, 'buttonsColor', this.buttonsColor);
-
-    this.userForm = this.formBuilder.group({
-      username: ['', Validators.required],
-      password: ['', Validators.required]
-    });
-  }
-
-  openDialog() {
-    this.store.dispatch(new OpenForgottenPasswordDialog());
-  }
-
-  onSubmit() {
-    const newUser: Partial<User> = {
-      username: this.userForm.value['username'],
-      password: this.userForm.value['password']
-    };
-    this.store.dispatch(new LogIn(newUser));
+  onSubmit(): void {
+    const { username, password } = this.userForm.getRawValue();
+    const newUser: Partial<User> = { username, password };
+    this.store.dispatch(LogIn({ payload: newUser }));
   }
 }

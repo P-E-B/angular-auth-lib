@@ -1,18 +1,20 @@
-import * as UserActions from './actions';
+import { createFeature, createReducer, on } from '@ngrx/store';
 import { HttpErrorResponse } from '@angular/common/http';
+
 import { User } from '../models/user.models';
+import * as UserActions from './actions';
 
 export interface AuthState {
     isAuthenticated: boolean;
     isSignUpLoading: boolean;
     isSendActivationCodeLoading: boolean;
-    isUserActivated: boolean;
-    isUserCreated: boolean;
+    isUserActivated: boolean | null;
+    isUserCreated: boolean | null;
     isLoginLoading: boolean;
-    user: User;
-    error: HttpErrorResponse;
+    user: User | null;
+    error: HttpErrorResponse | null;
     isPasswordBeingChanged: boolean;
-    usersList: { id: number, firstName: string, lastName: string }[];
+    usersList: { id: number; firstName: string; lastName: string }[] | null;
 }
 
 export const initialState: AuthState = {
@@ -28,77 +30,98 @@ export const initialState: AuthState = {
     usersList: null
 };
 
-export function authReducer(state: AuthState = initialState, action: UserActions.Actions) {
-    switch (action.type) {
-        case UserActions.AUTH_ACTIONS_TYPE.SIGN_UP:
-            return { ...state, error: null, isSignUpLoading: true };
-        case UserActions.AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE:
-            return {
-                ...state,
-                error: action.payload,
-                isSignUpLoading: false,
-                isUserCreated: false
-            };
-        case UserActions.AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS:
-            return {
-                ...state,
-                error: null,
-                isSignUpLoading: false,
-                isUserCreated: true
-            };
-        case UserActions.AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE:
-            return {
-                ...state,
-                error: null,
-                isSendActivationCodeLoading: true
-            };
-        case UserActions.AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE:
-            return {
-                ...state,
-                error: action.payload,
-                isSendActivationCodeLoading: false,
-                isUserActivated: false
-            };
-        case UserActions.AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS:
-            return {
-                ...state,
-                error: null,
-                isSendActivationCodeLoading: false,
-                isUserActivated: true
-            };
+export const authFeature = createFeature({
+    name: 'auth',
+    reducer: createReducer(
+        initialState,
 
-        case UserActions.AUTH_ACTIONS_TYPE.LOG_IN:
-            return { ...state, error: null, isLoginLoading: true };
-        case UserActions.AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS:
-            return {
-                ...state,
-                isAuthenticated: true,
-                user: action.payload.user,
-                error: null,
-                usersList: action.payload.usersList,
-                isLoginLoading: false
-            };
-        case UserActions.AUTH_ACTIONS_TYPE.LOG_IN_FAILURE:
-            return { ...state, error: action.payload, isLoginLoading: false };
-        case UserActions.AUTH_ACTIONS_TYPE.LOG_OUT:
-            return initialState;
-            
-        case UserActions.AUTH_ACTIONS_TYPE.LOAD_USER_INFORMATION_SUCCESS:
-            const detailedUser = { ...state.user, ...action.payload };
-            return { ...state, user: detailedUser };
-        case UserActions.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD:
-        case UserActions.AUTH_ACTIONS_TYPE.SEND_PASSWORD:
-            return { ...state, isPasswordBeingChanged: true };
-        case UserActions.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_SUCCESS:
-        case UserActions.AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_FAILURE:
-        case UserActions.AUTH_ACTIONS_TYPE.SEND_PASSWORD_SUCCESS:
-        case UserActions.AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE:
-            return { ...state, isPasswordBeingChanged: false };
-        case UserActions.AUTH_ACTIONS_TYPE.UPDATE_USER:
-            return { ...state, user: { ...state.user, ...action.payload }};
-        case UserActions.AUTH_ACTIONS_TYPE.RESET_AUTH_STATE:
-            return initialState;
-        default:
-            return state;
-    }
-}
+        on(UserActions.SignUp, (state): AuthState => ({
+            ...state,
+            error: null,
+            isSignUpLoading: true
+        })),
+        on(UserActions.SignUpFailure, (state, { payload }): AuthState => ({
+            ...state,
+            error: payload,
+            isSignUpLoading: false,
+            isUserCreated: false
+        })),
+        on(UserActions.SignUpSuccess, (state): AuthState => ({
+            ...state,
+            error: null,
+            isSignUpLoading: false,
+            isUserCreated: true
+        })),
+
+        on(UserActions.SendActivationCode, (state): AuthState => ({
+            ...state,
+            error: null,
+            isSendActivationCodeLoading: true
+        })),
+        on(UserActions.SendActivationCodeFailure, (state, { payload }): AuthState => ({
+            ...state,
+            error: payload,
+            isSendActivationCodeLoading: false,
+            isUserActivated: false
+        })),
+        on(UserActions.SendActivationCodeSuccess, (state): AuthState => ({
+            ...state,
+            error: null,
+            isSendActivationCodeLoading: false,
+            isUserActivated: true
+        })),
+
+        on(UserActions.LogIn, (state): AuthState => ({
+            ...state,
+            error: null,
+            isLoginLoading: true
+        })),
+        on(UserActions.LogInSuccess, (state, { payload }): AuthState => ({
+            ...state,
+            isAuthenticated: true,
+            user: payload.user,
+            error: null,
+            usersList: payload.usersList,
+            isLoginLoading: false
+        })),
+        on(UserActions.LogInFailure, (state, { payload }): AuthState => ({
+            ...state,
+            error: payload,
+            isLoginLoading: false
+        })),
+
+        on(UserActions.LogOut, (): AuthState => initialState),
+
+        on(UserActions.LoadUserInformationSuccess, (state, { payload }): AuthState => ({
+            ...state,
+            user: { ...state.user, ...payload }
+        })),
+
+        on(
+            UserActions.ChangePassword,
+            UserActions.SendPassword,
+            (state): AuthState => ({ ...state, isPasswordBeingChanged: true })
+        ),
+        on(
+            UserActions.ChangePasswordSuccess,
+            UserActions.ChangePasswordFailure,
+            UserActions.SendPasswordSuccess,
+            UserActions.SendPasswordFailure,
+            (state): AuthState => ({ ...state, isPasswordBeingChanged: false })
+        ),
+
+        on(UserActions.UpdateUser, (state, { payload }): AuthState => ({
+            ...state,
+            user: { ...state.user, ...payload } as User
+        })),
+
+        on(UserActions.ResetAuthState, (): AuthState => initialState)
+    )
+});
+
+/**
+ * Back-compat alias for the feature reducer.
+ * Prefer registering {@link authFeature} via `StoreModule.forFeature(authFeature)`
+ * or `provideState(authFeature)`.
+ */
+export const { reducer: authReducer } = authFeature;

@@ -1,76 +1,48 @@
 import { NgModule, ModuleWithProviders } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { RouterModule } from '@angular/router';
-import { MatInputModule } from '@angular/material/input';
-import { MatCardModule } from '@angular/material/card';
-import { MatDialogModule } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { ReactiveFormsModule } from '@angular/forms';
 
-import { StoreModule } from '@ngrx/store';
-import { EffectsModule } from '@ngrx/effects';
-
-import { ToastrModule } from 'ngx-toastr';
-
-import { authReducer } from './store/reducer';
-import { AuthEffects } from './store/effects';
-import { TokenInterceptor } from './services/token.interceptor';
-import { AuthGuard } from './services/auth-guard.service';
 import { LogInComponent } from './components/log-in/log-in.component';
 import { ForgottenPasswordComponent } from './components/forgotten-password/forgotten-password.component';
 import { ActivateUserComponent } from './components/activate-user/activate-user.component';
 import { SignUpComponent } from './components/sign-up/sign-up.component';
+import { AuthModuleConfig } from './token';
+import { provideAuth } from './provide-auth';
 
-import {
-  AuthModuleConfig,
-  AUTH_API_URLS,
-  AUTH_IMAGES_URLS,
-  AUTH_TRADUCTIONS,
-  AUTH_RESET_ACTIONS,
-  AUTH_STYLES
-} from './token';
-
-
+/**
+ * Thin back-compat NgModule wrapper around the standalone auth components.
+ *
+ * @deprecated Prefer the standalone bootstrap API:
+ *  - call {@link provideAuth} in your `ApplicationConfig.providers`, and
+ *  - import `LogInComponent` / `ForgottenPasswordComponent` /
+ *    `SignUpComponent` / `ActivateUserComponent` directly where used.
+ *
+ * This module no longer imports `HttpClientModule`, `BrowserAnimationsModule`,
+ * Material modules, or NgRx `forFeature` modules — those concerns now live in
+ * the standalone components themselves and in {@link provideAuth}.
+ */
 @NgModule({
-  declarations: [LogInComponent, ForgottenPasswordComponent, SignUpComponent, ActivateUserComponent],
   imports: [
-    CommonModule,
-    HttpClientModule,
-    RouterModule,
-    ReactiveFormsModule,
-    StoreModule.forFeature('auth', authReducer),
-    EffectsModule.forFeature([AuthEffects]),
-    BrowserAnimationsModule,
-    MatCardModule,
-    MatDialogModule,
-    MatButtonModule,
-    MatInputModule,
-    MatProgressSpinnerModule,
-    ToastrModule.forRoot({
-      timeOut: 3000,
-      positionClass: 'toast-bottom-right',
-      preventDuplicates: true
-    })
+    LogInComponent,
+    ForgottenPasswordComponent,
+    SignUpComponent,
+    ActivateUserComponent
   ],
-  entryComponents: [ForgottenPasswordComponent],
-  exports: [LogInComponent, ForgottenPasswordComponent, SignUpComponent, ActivateUserComponent],
-  providers: [AuthGuard]
+  exports: [
+    LogInComponent,
+    ForgottenPasswordComponent,
+    SignUpComponent,
+    ActivateUserComponent
+  ]
 })
 export class AuthModule {
+  /**
+   * @deprecated Use {@link provideAuth} in a standalone `ApplicationConfig`.
+   * This method is retained for NgModule-based consumers and simply delegates
+   * to `provideAuth(config)`.
+   */
   static forRoot(config: AuthModuleConfig): ModuleWithProviders<AuthModule> {
     return {
       ngModule: AuthModule,
-      providers: [
-        { provide: AUTH_API_URLS, useValue: config.urls },
-        { provide: AUTH_IMAGES_URLS, useValue: config.images },
-        { provide: AUTH_TRADUCTIONS, useValue: config.traductions },
-        { provide: AUTH_RESET_ACTIONS, useValue: config.resetActions },
-        { provide: AUTH_STYLES, useValue: config.styles },
-        { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true }
-      ]
+      providers: [provideAuth(config)]
     };
   }
 }

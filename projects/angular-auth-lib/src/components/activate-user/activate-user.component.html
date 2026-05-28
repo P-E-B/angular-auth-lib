@@ -1,23 +1,30 @@
-<div class="activate-password-container" [ngStyle]="{'background-image': 'url(' + images.loginBackgroundImageUrl + ')'}">
+<div
+  class="activate-password-container"
+  [style.background-image]="'url(' + images.loginBackgroundImageUrl + ')'"
+>
   <mat-card class="mat-elevation-z8">
-    <img *ngIf="images.logoImageUrl && images.logoImageUrl.length >= 1" [src]="images.logoImageUrl">
-      <mat-form-field>
-        <input matInput [placeholder]="activationCodePlaceholder" #activationCode>
-      </mat-form-field>
-    
+    @if (images.logoImageUrl && images.logoImageUrl.length >= 1) {
+      <img [src]="images.logoImageUrl" alt="logo" />
+    }
+
+    <mat-form-field>
+      <mat-label>{{ activationCodePlaceholder }}</mat-label>
+      <input matInput [formControl]="activationCode" />
+    </mat-form-field>
+
+    @if (isSendActivationCodeLoading()) {
+      <mat-progress-spinner mode="indeterminate" [diameter]="36" />
+    } @else {
       <button
-          *ngIf="!(isSendActivationCodeLoading$ | async)"
-          mat-raised-button
-          type="button"
-          [disabled]="!(this.activationCodeInput && this.activationCodeInput.nativeElement && this.activationCodeInput.nativeElement.value)"
-          (click)="onSubmitActivationCode()"
-          [ngStyle]="{
-            'background-color': buttonsBackgroundColor,
-            'color': buttonsColor
-          }"
+        mat-raised-button
+        type="button"
+        [disabled]="!activationCode.value"
+        (click)="onSubmitActivationCode()"
+        [style.background-color]="buttonsBackgroundColor"
+        [style.color]="buttonsColor"
       >
-          {{ sendActivationButtonTraduction }}
+        {{ sendActivationButtonTraduction }}
       </button>
-      <mat-spinner *ngIf="isSendActivationCodeLoading$ | async" [diameter]="36"></mat-spinner>
+    }
   </mat-card>
 </div>
