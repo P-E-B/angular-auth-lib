@@ -1,46 +1,51 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { User, Token } from '../models/user.models';
-import { map } from 'rxjs/operators';
-import { Observable } from 'rxjs';
-import { AUTH_API_URLS, AuthModuleConfig } from '../token';
 import { isPlatformBrowser } from '@angular/common';
+import { Observable, map } from 'rxjs';
 
+import { User, Token } from '../models/user.models';
+import { AUTH_API_URLS } from '../token';
+
+interface AccessTokenResponse {
+  access: string;
+}
+
+interface UserInformationResponse {
+  user: User;
+  usersList: User[];
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-
-  constructor(
-    @Inject(AUTH_API_URLS) private apiUrls: AuthModuleConfig['urls'],
-    @Inject(PLATFORM_ID) private platformId: any,
-    private http: HttpClient
-  ) { }
+  private readonly apiUrls = inject(AUTH_API_URLS);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly http = inject(HttpClient);
 
   public decodeToken(token: string): Token {
     const tokenParts = token.split(/\./);
-    const tokenDecoded = JSON.parse(window.atob(tokenParts[1]));
+    const tokenDecoded = JSON.parse(globalThis.atob(tokenParts[1]));
     const expiringDate = new Date(tokenDecoded.exp * 1000);
-    return { token: token, expiringDate: expiringDate };
+    return { token, expiringDate };
   }
 
-  public getToken(): Token {
+  public getToken(): Token | null {
     const token = isPlatformBrowser(this.platformId) ? sessionStorage.getItem('token') : null;
     return token ? this.decodeToken(token) : null;
   }
 
   private getAccessToken(user: User): Observable<Token> {
     const body = { username: user.username, password: user.password };
-    return this.http.post(this.apiUrls.accessTokenUrl, body).pipe(
-      map((tokenData: any) => this.decodeToken(tokenData['access']))
+    return this.http.post<AccessTokenResponse>(this.apiUrls.accessTokenUrl, body).pipe(
+      map((tokenData) => this.decodeToken(tokenData.access))
     );
   }
 
   private getRefreshToken(token: Token): Observable<Token> {
     const body = { refresh: token.token };
-    return this.http.post(this.apiUrls.refreshTokenUrl, body).pipe(
-      map((tokenData: any) => this.decodeToken(tokenData['access']))
+    return this.http.post<AccessTokenResponse>(this.apiUrls.refreshTokenUrl!, body).pipe(
+      map((tokenData) => this.decodeToken(tokenData.access))
     );
   }
 
@@ -48,34 +53,34 @@ export class AuthService {
     return this.getAccessToken(user).pipe(
       map((token: Token) => ({
         ...user,
-        token: token
+        token
       }))
     );
   }
 
-  getUserInformation(): Observable<{ user: User, usersList: User[] }> {
-    return this.http.get(this.apiUrls.userInformationUrl).pipe(
-      map((result: any) => ({
+  public getUserInformation(): Observable<{ user: User; usersList: User[] }> {
+    return this.http.get<UserInformationResponse>(this.apiUrls.userInformationUrl).pipe(
+      map((result) => ({
         usersList: result.usersList,
         user: { ...result.user, dateJoined: new Date(result.user.dateJoined) }
       }))
     );
   }
 
-  changePassword(passwordChanges: { currentPassword: string, nextPassword: string }) {
-    return this.http.put(this.apiUrls.changePasswordUrl, passwordChanges);
+  public changePassword(passwordChanges: { currentPassword: string; nextPassword: string }): Observable<unknown> {
+    return this.http.put<unknown>(this.apiUrls.changePasswordUrl!, passwordChanges);
   }
 
-  sendPassword(mail: string) {
-    return this.http.post(this.apiUrls.sendBackPasswordUrl, { email: mail });
+  public sendPassword(mail: string): Observable<unknown> {
+    return this.http.post<unknown>(this.apiUrls.sendBackPasswordUrl, { email: mail });
   }
 
-  sendActivationCode(activationCode: string) {
+  public sendActivationCode(activationCode: string): Observable<unknown> {
     const params = new HttpParams().append('activationCode', activationCode);
-    return this.http.get(this.apiUrls.sendActivationCodeUrl, { params });
+    return this.http.get<unknown>(this.apiUrls.sendActivationCodeUrl!, { params });
   }
 
-  createUser(user: User) {
-    return this.http.post(this.apiUrls.signUpUrl, user);
+  public createUser(user: User): Observable<unknown> {
+    return this.http.post<unknown>(this.apiUrls.signUpUrl!, user);
   }
 }

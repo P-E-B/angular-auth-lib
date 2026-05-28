@@ -1,170 +1,165 @@
-import { Action } from '@ngrx/store';
+import { createActionGroup, emptyProps, props } from '@ngrx/store';
 import { HttpErrorResponse } from '@angular/common/http';
+
 import { User } from '../models/user.models';
 
-export enum AUTH_ACTIONS_TYPE {
-    OPEN_SIGN_UP_DIALOG = '[Auth] User wants to sign up',
-    SIGN_UP = '[Auth] User tries to sign up',
-    SIGN_UP_SUCCESS = '[Auth] Sign up success',
-    SIGN_UP_FAILURE = '[Auth] Sign up failure',
+/**
+ * NgRx 20 action group for the auth feature.
+ *
+ * Prefer importing this grouped object in new code:
+ *   `store.dispatch(AuthActions.logIn({ payload: user }))`
+ *
+ * Legacy PascalCase aliases (e.g. `LogIn`, `SignUp`, …) are re-exported below
+ * so existing imports keep resolving.
+ */
+export const AuthActions = createActionGroup({
+    source: 'Auth',
+    events: {
+        'Open Sign Up Dialog': emptyProps(),
+        'Sign Up': props<{ payload: Partial<User> }>(),
+        'Sign Up Success': emptyProps(),
+        'Sign Up Failure': props<{ payload: HttpErrorResponse }>(),
 
-    SEND_ACTIVATION_CODE = '[Auth] User sends his activation code',
-    SEND_ACTIVATION_CODE_SUCCESS = '[Auth] Success while sending the activation',
-    SEND_ACTIVATION_CODE_FAILURE = '[Auth] Activation code failure',
+        'Send Activation Code': props<{ payload: string }>(),
+        'Send Activation Code Success': emptyProps(),
+        'Send Activation Code Failure': props<{ payload: HttpErrorResponse }>(),
 
-    LOG_IN = '[Auth] User tries to log in',
-    LOG_IN_SUCCESS = '[Auth] Log in success',
-    LOG_IN_FAILURE = '[Auth] Log in failure',
+        'Log In': props<{ payload: Partial<User> }>(),
+        'Log In Success': props<{
+            payload: {
+                user: User;
+                usersList: { id: number; firstName: string; lastName: string }[];
+            };
+        }>(),
+        'Log In Failure': props<{ payload: HttpErrorResponse }>(),
 
-    LOG_OUT = '[Auth] User logs out',
+        'Log Out': emptyProps(),
 
-    LOAD_USER_INFORMATION = '[Auth] Loading of user information',
-    LOAD_USER_INFORMATION_SUCCESS = '[Auth] Loading of user information success',
-    LOAD_USER_INFORMATION_FAILURE = '[Auth] Loading of user information failure',
+        'Load User Information': emptyProps(),
+        'Load User Information Success': props<{ payload: User }>(),
+        'Load User Information Failure': props<{ payload: HttpErrorResponse }>(),
 
-    CHANGE_PASSWORD = '[Auth] User changes his password',
-    CHANGE_PASSWORD_SUCCESS = '[Auth] Password change success',
-    CHANGE_PASSWORD_FAILURE = '[Auth] Password change failure',
+        'Change Password': props<{ payload: { currentPassword: string; nextPassword: string } }>(),
+        'Change Password Success': emptyProps(),
+        'Change Password Failure': props<{ payload: HttpErrorResponse }>(),
 
-    OPEN_FORGOTTEN_PASSWORD_DIALOG = '[Auth] User opens dialog for password resetting',
-    SEND_PASSWORD = '[Auth] User has asked for having back a new password',
-    SEND_PASSWORD_SUCCESS = '[Auth] User has received his password',
-    SEND_PASSWORD_FAILURE = '[Auth] Error in the process of sending the password to the user',
+        'Open Forgotten Password Dialog': emptyProps(),
+        'Send Password': props<{ payload: string }>(),
+        'Send Password Success': emptyProps(),
+        'Send Password Failure': props<{ payload: HttpErrorResponse }>(),
 
-    UPDATE_USER = '[Auth] Update of user',
+        'Update User': props<{ payload: Partial<User> }>(),
 
-    RESET_AUTH_STATE = '[Auth] Reset Auth state'
-}
+        'Reset Auth State': emptyProps(),
+    },
+});
 
-export class OpenSignUpDialog implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.OPEN_SIGN_UP_DIALOG;
-}
+// ---------------------------------------------------------------------------
+// Back-compat individual exports
+// ---------------------------------------------------------------------------
+// The library historically exported one class per action. The destructured
+// constants below keep those import paths working while pointing at the new
+// action creators. Dispatch syntax changes from `new LogIn(user)` to
+// `LogIn({ payload: user })`.
+// ---------------------------------------------------------------------------
 
-export class SignUp implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SIGN_UP;
-    constructor(public payload: Partial<User>) {}
-}
+export const {
+    openSignUpDialog: OpenSignUpDialog,
+    signUp: SignUp,
+    signUpSuccess: SignUpSuccess,
+    signUpFailure: SignUpFailure,
+    sendActivationCode: SendActivationCode,
+    sendActivationCodeSuccess: SendActivationCodeSuccess,
+    sendActivationCodeFailure: SendActivationCodeFailure,
+    logIn: LogIn,
+    logInSuccess: LogInSuccess,
+    logInFailure: LogInFailure,
+    logOut: LogOut,
+    loadUserInformation: LoadUserInformation,
+    loadUserInformationSuccess: LoadUserInformationSuccess,
+    loadUserInformationFailure: LoadUserInformationFailure,
+    changePassword: ChangePassword,
+    changePasswordSuccess: ChangePasswordSuccess,
+    changePasswordFailure: ChangePasswordFailure,
+    openForgottenPasswordDialog: OpenForgottenPasswordDialog,
+    sendPassword: SendPassword,
+    sendPasswordSuccess: SendPasswordSuccess,
+    sendPasswordFailure: SendPasswordFailure,
+    updateUser: UpdateUser,
+    resetAuthState: ResetAuthState,
+} = AuthActions;
 
-export class SignUpSuccess implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SIGN_UP_SUCCESS;
-}
+/**
+ * @deprecated The string-literal action types are now derived from
+ * `createActionGroup`. This map is kept so existing
+ * `ofType(AUTH_ACTIONS_TYPE.X)` / switch-case call sites keep compiling, but
+ * prefer passing the action creator directly: `ofType(AuthActions.logIn)`.
+ *
+ * Note: the literal string values changed as part of the migration
+ * (e.g. `'[Auth] User tries to log in'` → `'[Auth] Log In'`).
+ */
+export const AUTH_ACTIONS_TYPE = {
+    OPEN_SIGN_UP_DIALOG: OpenSignUpDialog.type,
+    SIGN_UP: SignUp.type,
+    SIGN_UP_SUCCESS: SignUpSuccess.type,
+    SIGN_UP_FAILURE: SignUpFailure.type,
 
-export class SignUpFailure implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SIGN_UP_FAILURE;
-    constructor(public payload: HttpErrorResponse) {}
-}
+    SEND_ACTIVATION_CODE: SendActivationCode.type,
+    SEND_ACTIVATION_CODE_SUCCESS: SendActivationCodeSuccess.type,
+    SEND_ACTIVATION_CODE_FAILURE: SendActivationCodeFailure.type,
 
-export class SendActivationCode implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE;
-    constructor(public payload: string) {}
-}
+    LOG_IN: LogIn.type,
+    LOG_IN_SUCCESS: LogInSuccess.type,
+    LOG_IN_FAILURE: LogInFailure.type,
 
-export class SendActivationCodeSuccess implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_SUCCESS;
-}
+    LOG_OUT: LogOut.type,
 
-export class SendActivationCodeFailure implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SEND_ACTIVATION_CODE_FAILURE;
-    constructor(public payload: HttpErrorResponse) {}
-}
+    LOAD_USER_INFORMATION: LoadUserInformation.type,
+    LOAD_USER_INFORMATION_SUCCESS: LoadUserInformationSuccess.type,
+    LOAD_USER_INFORMATION_FAILURE: LoadUserInformationFailure.type,
 
-export class LogIn implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.LOG_IN;
-    constructor (public payload: Partial<User>) {}
-}
+    CHANGE_PASSWORD: ChangePassword.type,
+    CHANGE_PASSWORD_SUCCESS: ChangePasswordSuccess.type,
+    CHANGE_PASSWORD_FAILURE: ChangePasswordFailure.type,
 
-export class LogInSuccess implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.LOG_IN_SUCCESS;
-    constructor(public payload: {
-        user: User,
-        usersList: { id: number, firstName: string, lastName: string }[]
-    }) {}
-}
+    OPEN_FORGOTTEN_PASSWORD_DIALOG: OpenForgottenPasswordDialog.type,
+    SEND_PASSWORD: SendPassword.type,
+    SEND_PASSWORD_SUCCESS: SendPasswordSuccess.type,
+    SEND_PASSWORD_FAILURE: SendPasswordFailure.type,
 
-export class LogInFailure implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.LOG_IN_FAILURE;
-    constructor(public payload: HttpErrorResponse) {}
-}
+    UPDATE_USER: UpdateUser.type,
 
-export class LogOut implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.LOG_OUT;
-}
+    RESET_AUTH_STATE: ResetAuthState.type,
+} as const;
 
-export class LoadUserInformation implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.LOAD_USER_INFORMATION;
-}
+export type AUTH_ACTIONS_TYPE = (typeof AUTH_ACTIONS_TYPE)[keyof typeof AUTH_ACTIONS_TYPE];
 
-export class LoadUserInformationSuccess implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.LOAD_USER_INFORMATION_SUCCESS;
-    constructor(public payload: User) {}
-}
-
-export class LoadUserInformationFailure implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.LOAD_USER_INFORMATION_FAILURE;
-    constructor(public payload: HttpErrorResponse) {}
-}
-
-export class ChangePassword implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.CHANGE_PASSWORD;
-    constructor(public payload: { currentPassword: string, nextPassword: string }) {}
-}
-
-export class ChangePasswordSuccess implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_SUCCESS;
-}
-
-export class ChangePasswordFailure implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.CHANGE_PASSWORD_FAILURE;
-    constructor(public payload: HttpErrorResponse) {}
-}
-
-export class OpenForgottenPasswordDialog implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.OPEN_FORGOTTEN_PASSWORD_DIALOG;
-}
-
-export class SendPassword implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SEND_PASSWORD;
-    constructor(public payload: string) {}
-}
-
-export class SendPasswordSuccess implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SEND_PASSWORD_SUCCESS;
-}
-
-export class SendPasswordFailure implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.SEND_PASSWORD_FAILURE;
-    constructor(public payload: HttpErrorResponse) {}
-}
-
-export class UpdateUser implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.UPDATE_USER;
-    constructor(public payload: Partial<User>) {}
-}
-
-export class ResetAuthState implements Action {
-    readonly type = AUTH_ACTIONS_TYPE.RESET_AUTH_STATE;
-}
-
-export type Actions = OpenSignUpDialog
-    | SignUp
-    | SignUpSuccess
-    | SignUpFailure
-    | SendActivationCode
-    | SendActivationCodeSuccess
-    | SendActivationCodeFailure
-    | LogIn
-    | LogInSuccess
-    | LogInFailure
-    | LogOut
-    | LoadUserInformation
-    | LoadUserInformationSuccess
-    | LoadUserInformationFailure
-    | ChangePassword
-    | ChangePasswordSuccess
-    | ChangePasswordFailure
-    | OpenForgottenPasswordDialog
-    | SendPassword
-    | SendPasswordSuccess
-    | SendPasswordFailure
-    | UpdateUser
-    | ResetAuthState;
+/**
+ * @deprecated Union of every auth action shape. Kept for legacy reducers that
+ * `switch (action.type)`. New code should use `createReducer` / `on()` and let
+ * NgRx infer the action type.
+ */
+export type Actions =
+    | ReturnType<typeof OpenSignUpDialog>
+    | ReturnType<typeof SignUp>
+    | ReturnType<typeof SignUpSuccess>
+    | ReturnType<typeof SignUpFailure>
+    | ReturnType<typeof SendActivationCode>
+    | ReturnType<typeof SendActivationCodeSuccess>
+    | ReturnType<typeof SendActivationCodeFailure>
+    | ReturnType<typeof LogIn>
+    | ReturnType<typeof LogInSuccess>
+    | ReturnType<typeof LogInFailure>
+    | ReturnType<typeof LogOut>
+    | ReturnType<typeof LoadUserInformation>
+    | ReturnType<typeof LoadUserInformationSuccess>
+    | ReturnType<typeof LoadUserInformationFailure>
+    | ReturnType<typeof ChangePassword>
+    | ReturnType<typeof ChangePasswordSuccess>
+    | ReturnType<typeof ChangePasswordFailure>
+    | ReturnType<typeof OpenForgottenPasswordDialog>
+    | ReturnType<typeof SendPassword>
+    | ReturnType<typeof SendPasswordSuccess>
+    | ReturnType<typeof SendPasswordFailure>
+    | ReturnType<typeof UpdateUser>
+    | ReturnType<typeof ResetAuthState>;
