@@ -6,11 +6,10 @@ import { Observable, catchError, switchMap, throwError } from 'rxjs';
 
 import { AuthService } from './auth.service';
 import { Token } from '../models/user.models';
-import { AUTH_API_URLS, AuthUrlsConfig } from '../token';
+import { AUTH_API_URLS, AUTH_BEHAVIOR, AuthBehaviorConfig, AuthUrlsConfig } from '../token';
 import { AuthActions } from '../store/actions';
 
-/** Refresh proactively when the access token expires within this window. */
-const REFRESH_SKEW_MS = 30_000;
+const DEFAULT_REFRESH_SKEW_MS = 30_000;
 
 function parseOrigin(url: string, base?: string): string | null {
   try {
@@ -20,9 +19,9 @@ function parseOrigin(url: string, base?: string): string | null {
   }
 }
 
-function buildAllowedOrigins(apiUrls: AuthUrlsConfig): Set<string> {
+function buildAllowedOrigins(apiUrls: AuthUrlsConfig, extra: string[] | undefined): Set<string> {
   const allowed = new Set<string>();
-  for (const url of Object.values(apiUrls)) {
+  for (const url of [...Object.values(apiUrls), ...(extra ?? [])]) {
     const origin = url ? parseOrigin(url) : null;
     if (origin) {
       allowed.add(origin);
@@ -41,41 +40,49 @@ function isAllowedUrl(url: string, allowedOrigins: Set<string>, baseOrigin: stri
   return requestOrigin === baseOrigin || allowedOrigins.has(requestOrigin);
 }
 
-function withBearer<T>(request: HttpRequest<T>, token: string): HttpRequest<T> {
-  return request.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
-}
-
 /** The login and refresh endpoints must never be retried by the refresh flow. */
 function isAuthEndpoint(url: string, apiUrls: AuthUrlsConfig): boolean {
   return url === apiUrls.accessTokenUrl || (!!apiUrls.refreshTokenUrl && url === apiUrls.refreshTokenUrl);
 }
 
+interface InterceptorContext {
+  readonly authService: AuthService;
+  readonly store: Store;
+  readonly apiUrls: AuthUrlsConfig;
+  readonly behavior: AuthBehaviorConfig;
+  readonly allowedOrigins: Set<string>;
+  readonly baseOrigin: string;
+}
+
 function handle(
   request: HttpRequest<unknown>,
   next: HttpHandlerFn,
-  authService: AuthService,
-  store: Store,
-  apiUrls: AuthUrlsConfig,
-  allowedOrigins: Set<string>,
-  baseOrigin: string
+  ctx: InterceptorContext
 ): Observable<HttpEvent<unknown>> {
-  const token = authService.getToken();
-  const allowed = isAllowedUrl(request.url, allowedOrigins, baseOrigin);
-  const refreshable = allowed && !isAuthEndpoint(request.url, apiUrls) && authService.canRefresh;
+  const token = ctx.authService.getToken();
+  const allowed = isAllowedUrl(request.url, ctx.allowedOrigins, ctx.baseOrigin);
+  const refreshable = allowed && !isAuthEndpoint(request.url, ctx.apiUrls) && ctx.authService.canRefresh;
+  const skew = ctx.behavior.refreshSkewMs ?? DEFAULT_REFRESH_SKEW_MS;
 
-  const send = (t: Token | null) => next(t && allowed ? withBearer(request, t.token) : request);
+  const send = (t: Token | null) => {
+    if (!t || !allowed) {
+      return next(request);
+    }
+    const headers = ctx.behavior.authHeader?.(t.token) ?? { Authorization: `Bearer ${t.token}` };
+    return next(request.clone({ setHeaders: headers }));
+  };
 
   const refreshThen = (onFail: unknown) =>
-    authService.refreshToken().pipe(
+    ctx.authService.refreshToken().pipe(
       switchMap((newToken) => {
-        store.dispatch(AuthActions.refreshTokenSuccess({ payload: newToken }));
+        ctx.store.dispatch(AuthActions.refreshTokenSuccess({ payload: newToken }));
         return send(newToken);
       }),
       catchError((refreshError: unknown) => {
         const payload =
           refreshError instanceof HttpErrorResponse ? refreshError : (onFail as HttpErrorResponse);
-        store.dispatch(AuthActions.refreshTokenFailure({ payload }));
-        store.dispatch(AuthActions.logOut());
+        ctx.store.dispatch(AuthActions.refreshTokenFailure({ payload }));
+        ctx.store.dispatch(AuthActions.logOut());
         return throwError(() => onFail);
       })
     );
@@ -83,7 +90,7 @@ function handle(
   // Proactive: the JWT's `exp` is decoded into `token.expiringDate`; refresh
   // before sending if it's already inside the skew window. Saves the 401
   // round-trip in the common case.
-  if (refreshable && token && token.expiringDate - Date.now() <= REFRESH_SKEW_MS) {
+  if (refreshable && token && token.expiringDate - Date.now() <= skew) {
     return refreshThen(new HttpErrorResponse({ status: 401, statusText: 'Token expired' }));
   }
 
@@ -98,13 +105,15 @@ function handle(
 }
 
 /**
- * Functional HTTP interceptor that attaches the auth `Bearer` token to outgoing
- * requests **only** when the request targets the app's own origin or one of the
- * configured `AUTH_API_URLS` origins, preventing token leakage to third parties.
+ * Functional HTTP interceptor that attaches the auth header to outgoing
+ * requests **only** when the request targets the app's own origin, one of the
+ * configured `AUTH_API_URLS` origins, or an origin in
+ * `behavior.allowedOrigins` — preventing token leakage to third parties.
  *
- * When `refreshTokenUrl` is configured and a refresh token is stored, a `401`
- * response triggers a single shared refresh and the original request is retried
- * once with the new bearer. If the refresh itself fails, `LogOut` is dispatched.
+ * When `refreshTokenUrl` is configured and a refresh token is stored, an
+ * expiring token or a `401` response triggers a single shared refresh and the
+ * original request is retried once with the new token. If the refresh itself
+ * fails, `AuthActions.logOut` is dispatched.
  *
  * Register with:
  * ```ts
@@ -112,10 +121,15 @@ function handle(
  * ```
  */
 export const tokenInterceptor: HttpInterceptorFn = (request, next: HttpHandlerFn) => {
-  const authService = inject(AuthService);
-  const store = inject(Store);
   const apiUrls = inject(AUTH_API_URLS);
-  const baseOrigin = inject(DOCUMENT).location.origin;
-
-  return handle(request, next, authService, store, apiUrls, buildAllowedOrigins(apiUrls), baseOrigin);
+  const behavior = inject(AUTH_BEHAVIOR);
+  const ctx: InterceptorContext = {
+    authService: inject(AuthService),
+    store: inject(Store),
+    apiUrls,
+    behavior,
+    baseOrigin: inject(DOCUMENT).location.origin,
+    allowedOrigins: buildAllowedOrigins(apiUrls, behavior.allowedOrigins),
+  };
+  return handle(request, next, ctx);
 };

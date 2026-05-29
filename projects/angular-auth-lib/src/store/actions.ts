@@ -16,6 +16,13 @@ import { Token } from '../models/user.models';
 export const AuthActions = createActionGroup({
     source: 'Auth',
     events: {
+        /**
+         * Dispatched at bootstrap by `provideAuth()` to restore
+         * `isAuthenticated` from a token already in storage. The follow-up
+         * user fetch (if `userInformationUrl` is set) runs as an effect.
+         */
+        'Rehydrate': props<{ hasToken: boolean }>(),
+
         'Log In': props<{ payload: unknown }>(),
         'Log In Success': props<{ payload: { user: unknown } }>(),
         'Log In Failure': props<{ payload: HttpErrorResponse }>(),

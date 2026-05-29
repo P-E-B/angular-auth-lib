@@ -16,8 +16,9 @@ That's it. Everything else is already in your Angular app.
 * `authGuard` — functional `CanActivateFn`; you supply the authorization predicate
 * `AuthService` — `login`, `refreshToken`, `getToken`, `storeToken`, `getUserInformation`
 * `AuthActions` — `logIn`, `logOut`, `refreshToken`, `loadUserInformation`, `updateUser`, `resetAuthState` (+ `…Success`/`…Failure`)
-* `AuthState` — `{ isAuthenticated: boolean; user: unknown }`
-* `selectIsAuthenticated`, `selectAuthUser<TUser>()`, `selectAuthState`
+* `AuthState` — `{ isAuthenticated: boolean; isLoading: boolean; user: unknown }`
+* `selectIsAuthenticated`, `selectIsLoading`, `selectAuthUser<TUser>()`, `selectAuthState`
+* Session **rehydration** on bootstrap, **multi-tab logout sync**, pluggable **token storage**
 
 The library never assumes a shape for your user record. It fetches it, stores it, and hands it back typed.
 
@@ -57,8 +58,10 @@ export const appConfig: ApplicationConfig = {
           const role = route.data?.['role'] as string | undefined;
           return role ? !!user && user.roles.includes(role) : true;
         },
-        redirectAfterLogin: () => '/dashboard',  // default '/'
-        loginRoute: 'signin',                    // default 'log-in'
+        // Receives the user — redirect can depend on who just logged in.
+        redirectAfterLogin: (user) =>
+          user?.roles.includes('admin') ? '/admin' : '/dashboard',  // default '/'
+        loginRoute: 'signin',                                       // default 'log-in'
       },
     }),
   ],
@@ -181,8 +184,28 @@ export class AppNotificationEffects {
 | `accessTokenUrl` | POST | your credentials object, verbatim | `{ "access": "<jwt>", "refresh"?: "<token>" }` |
 | `refreshTokenUrl` | POST | `{ "refresh": "<token>" }` | `{ "access": "<jwt>", "refresh"?: "<token>" }` |
 | `userInformationUrl` | GET | — | your user object, verbatim |
+| `logoutUrl` | POST | `{ "refresh": "<token>" }` | — (invalidate server-side) |
 
 The access token must be a JWT with an `exp` claim. The library decodes `exp` for proactive refresh; it never verifies the signature (your server does).
+
+**Different wire format?** Supply a `behavior.tokenAdapter`:
+
+```ts
+provideAuth<MyUser>({
+  urls: { accessTokenUrl: '/oauth/token', refreshTokenUrl: '/oauth/token' },
+  behavior: {
+    canActivate: () => true,
+    tokenAdapter: {
+      parse: (raw: { access_token: string; refresh_token?: string; expires_in: number }) => ({
+        token: raw.access_token,
+        refreshToken: raw.refresh_token,
+        expiringDate: Date.now() + raw.expires_in * 1000,
+      }),
+      buildRefreshBody: (refresh) => ({ grant_type: 'refresh_token', refresh_token: refresh }),
+    },
+  },
+});
+```
 
 
 ## Refresh tokens
@@ -208,6 +231,18 @@ dispatch logIn({ payload })
 When `authGuard` denies access, it returns a `UrlTree` to `behavior.loginRoute` with `?returnUrl=<attempted-url>`. The login-success effect honours `returnUrl` only when it's a root-relative path — absolute and protocol-relative URLs are rejected to prevent open-redirect attacks.
 
 
+## Session lifetime
+
+* **Rehydration** — `provideAuth()` registers an app initializer that checks `AUTH_TOKEN_STORAGE` at bootstrap. If a parseable token is present, `isAuthenticated` is restored synchronously (so `authGuard` works on first navigation) and the user record is fetched in the background.
+* **Multi-tab sync** — when another browser tab logs out, this tab dispatches `logOut` too via the `storage` event.
+* **Server-side logout** — set `urls.logoutUrl` and `logOut` will POST the refresh token there before clearing local storage. Logout always clears the client even if the call fails.
+* **Storage backend** — defaults to `sessionStorage` (tab-scoped). Override with `localStorage`, a cookie wrapper, or a namespaced shim:
+
+  ```ts
+  { provide: AUTH_TOKEN_STORAGE, useValue: localStorage }
+  ```
+
+
 ## API reference
 
 ### `AuthModuleConfig<TUser>`
@@ -218,14 +253,27 @@ interface AuthModuleConfig<TUser = unknown> {
     accessTokenUrl: string;
     refreshTokenUrl?: string;
     userInformationUrl?: string;
+    logoutUrl?: string;
   };
   behavior: {
     canActivate: (user: TUser | null, route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => boolean;
-    redirectAfterLogin?: (user: TUser | null) => string;  // default '/'
-    loginRoute?: string;                                   // default 'log-in'
+    redirectAfterLogin?: (user: TUser | null) => string;             // default '/'
+    loginRoute?: string;                                              // default 'log-in'
+    refreshSkewMs?: number;                                           // default 30_000
+    authHeader?: (accessToken: string) => Record<string, string>;     // default Bearer
+    allowedOrigins?: string[];                                        // extra origins to attach the header to
+    tokenAdapter?: AuthTokenAdapter;                                  // custom wire format
   };
 }
 ```
+
+### Injection tokens
+
+| Token | Default | Override for |
+|---|---|---|
+| `AUTH_API_URLS` | — (set by `provideAuth`) | rarely needed directly |
+| `AUTH_BEHAVIOR` | — (set by `provideAuth`) | rarely needed directly |
+| `AUTH_TOKEN_STORAGE` | `sessionStorage` (browser), no-op (SSR) | `localStorage`, cookie-backed, namespaced |
 
 ### `AuthActions`
 
@@ -249,7 +297,8 @@ interface AuthModuleConfig<TUser = unknown> {
 ```ts
 interface Token { token: string; expiringDate: number; refreshToken?: string }
 interface AuthCredentials { email: string; password: string }
-interface AuthState { isAuthenticated: boolean; user: unknown | null }
+interface AuthState { isAuthenticated: boolean; isLoading: boolean; user: unknown | null }
+type AuthTokenStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 ```
 
 
@@ -278,6 +327,11 @@ interface AuthState { isAuthenticated: boolean; user: unknown | null }
 ## Change log
 
 * **2.0.0** — **BREAKING** headless rewrite
+  * Session rehydration on bootstrap; multi-tab logout sync
+  * `AUTH_TOKEN_STORAGE` injection token (pluggable storage backend)
+  * `urls.logoutUrl` for server-side refresh-token invalidation
+  * `behavior.tokenAdapter` for non-`{access,refresh}` backends; `authHeader`, `allowedOrigins`, `refreshSkewMs` hooks
+  * `selectIsLoading`; `decodeToken` returns `null` on malformed input instead of throwing
   * Removed all UI components, `ngx-toastr`, `@angular/material`, `@angular/forms` peers
   * Removed `BaseUser`/`User` — user record is opaque; new `selectAuthUser<TUser>()` and `provideAuth<TUser>()`
   * Removed account-management actions (`signUp`, `changePassword`, `sendPassword`, `sendActivationCode`) and `usersList`

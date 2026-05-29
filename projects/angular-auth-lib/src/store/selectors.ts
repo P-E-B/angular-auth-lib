@@ -2,7 +2,7 @@ import { createSelector } from '@ngrx/store';
 
 import { authFeature } from './reducer';
 
-export const { selectAuthState, selectIsAuthenticated } = authFeature;
+export const { selectAuthState, selectIsAuthenticated, selectIsLoading } = authFeature;
 
 /**
  * Typed user selector factory. The auth feature stores the user record as
