@@ -8,11 +8,14 @@ import { AuthActions } from './actions';
  */
 export interface AuthState {
     isAuthenticated: boolean;
+    /** True while a `logIn` request is in flight. */
+    isLoading: boolean;
     user: unknown | null;
 }
 
 const initialState: AuthState = {
     isAuthenticated: false,
+    isLoading: false,
     user: null,
 };
 
@@ -21,11 +24,21 @@ export const authFeature = createFeature({
     reducer: createReducer(
         initialState,
 
+        on(AuthActions.rehydrate, (state, { hasToken }): AuthState => ({
+            ...state,
+            isAuthenticated: hasToken,
+        })),
+
+        on(AuthActions.logIn, (state): AuthState => ({ ...state, isLoading: true })),
+
         on(AuthActions.logInSuccess, (state, { payload }): AuthState => ({
             ...state,
             isAuthenticated: true,
+            isLoading: false,
             user: payload.user,
         })),
+
+        on(AuthActions.logInFailure, (state): AuthState => ({ ...state, isLoading: false })),
 
         on(
             AuthActions.loadUserInformationSuccess,

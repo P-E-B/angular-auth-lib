@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, concatMap, filter, map, of, switchMap, tap } from 'rxjs';
+import { EMPTY, catchError, concatMap, filter, fromEvent, map, of, switchMap, tap } from 'rxjs';
 
 import { AuthActions } from './actions';
 import { AuthService } from '../services/auth.service';
@@ -22,6 +22,40 @@ export class AuthEffects {
   private get loginRoute(): string {
     return this.behavior.loginRoute ?? 'log-in';
   }
+
+  /**
+   * On bootstrap rehydration: if a valid token was found in storage and
+   * `userInformationUrl` is configured, fetch the user record so
+   * `selectAuthUser` is populated without an explicit dispatch from the host.
+   */
+  rehydrate$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.rehydrate),
+      filter(({ hasToken }) => hasToken && !!this.apiUrls.userInformationUrl),
+      switchMap(() =>
+        this.authService.getUserInformation().pipe(
+          map((user) => AuthActions.loadUserInformationSuccess({ payload: user })),
+          catchError((error: HttpErrorResponse) => of(AuthActions.loadUserInformationFailure({ payload: error })))
+        )
+      )
+    )
+  );
+
+  /**
+   * Multi-tab sync: when another tab clears the access token (logout) the
+   * `storage` event fires here; mirror it so guarded routes don't keep
+   * rendering with a stale `isAuthenticated`. Browser-only.
+   */
+  storageSync$ = createEffect(() => {
+    if (!isPlatformBrowser(this.platformId)) {
+      return EMPTY;
+    }
+    return fromEvent<StorageEvent>(window, 'storage').pipe(
+      filter((e) => e.key === 'angular-auth-lib.token' && e.newValue === null),
+      filter(() => this.authService.getToken() === null),
+      map(() => AuthActions.logOut())
+    );
+  });
 
   logIn$ = createEffect(() =>
     this.actions$.pipe(
@@ -82,10 +116,12 @@ export class AuthEffects {
       this.actions$.pipe(
         ofType(AuthActions.logOut),
         filter(() => isPlatformBrowser(this.platformId)),
-        tap(() => {
-          this.authService.storeToken(null);
-          this.router.navigate([this.loginRoute]);
-        })
+        switchMap(() =>
+          this.authService.logout().pipe(
+            catchError(() => of(void 0)),
+            tap(() => this.router.navigate([this.loginRoute]))
+          )
+        )
       ),
     { dispatch: false }
   );
